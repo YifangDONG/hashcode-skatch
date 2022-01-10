@@ -1,0 +1,4 @@
+src/main/resources/out
+src/main/resources/in
+.idea/
+target/
