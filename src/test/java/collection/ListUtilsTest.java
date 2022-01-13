@@ -33,4 +33,12 @@ public class ListUtilsTest {
         Map<Integer, Long> expected = Map.of(1, 1L, 2, 4L, 3, 1L);
         assertEquals(expected, valueCountInt);
     }
+
+    @Test
+    public void getPositionsTest() {
+        List<Integer> list = List.of(1, 0, 1, 0, 1);
+        List<Integer> positions = ListUtils.getPositions(list, i -> i == 1);
+        List<Integer> expected = List.of(0, 2, 4);
+        assertEquals(expected, positions);
+    }
 }
