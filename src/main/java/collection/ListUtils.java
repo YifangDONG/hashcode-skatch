@@ -1,9 +1,9 @@
 package collection;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -39,5 +39,19 @@ public class ListUtils {
             }
         }
         return positions;
+    }
+
+    /**
+     * the elements in the list should be unique !!
+     * @param list Should not use LinkedList !!
+     * @param <T>
+     * @return
+     */
+    public static <T> BiMap<Integer, T> index(List<T> list) {
+        BiMap<Integer, T> index = HashBiMap.create();
+        for(int i = 0 ; i < list.size(); i++) {
+            index.put(i, list.get(i));
+        }
+        return index;
     }
 }
