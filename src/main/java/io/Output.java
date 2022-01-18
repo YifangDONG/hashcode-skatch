@@ -16,7 +16,7 @@ public class Output {
 
     public static void write(String fileName, List<List<String>> content) {
 
-        try (BufferedWriter out = new BufferedWriter(new FileWriter(BASE_DIR_OUT + fileName + "-" + LocalTime.now().format(TIME_FORMATTER)))) {
+        try (BufferedWriter out = new BufferedWriter(new FileWriter(BASE_DIR_OUT + fileName))) {
             for(List<String> line : content) {
                 out.write(String.join(" ", line));
                 out.newLine();

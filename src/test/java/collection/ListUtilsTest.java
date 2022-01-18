@@ -1,5 +1,6 @@
 package collection;
 
+import com.google.common.collect.BiMap;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -40,5 +41,13 @@ public class ListUtilsTest {
         List<Integer> positions = ListUtils.getPositions(list, i -> i == 1);
         List<Integer> expected = List.of(0, 2, 4);
         assertEquals(expected, positions);
+    }
+
+    @Test
+    public void indexListTest() {
+        List<Integer> list = List.of(1, 3, 3, 4);
+        Map<Integer, Integer> index = ListUtils.indexList(list);
+        Map<Integer, Integer> expected = Map.of(0, 1, 1, 3, 2, 3, 3, 4);
+        assertEquals(expected, index);
     }
 }

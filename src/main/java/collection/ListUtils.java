@@ -4,6 +4,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -42,7 +43,6 @@ public class ListUtils {
     }
 
     /**
-     * the elements in the list should be unique !!
      * @param list Should not use LinkedList !!
      * @param <T>
      * @return
@@ -53,5 +53,13 @@ public class ListUtils {
             index.put(i, list.get(i));
         }
         return index;
+    }
+
+    public static <T> Map<Integer, T> indexList(List<T> list) {
+        AtomicInteger accumulator = new AtomicInteger(0);
+        return list.stream().collect(Collectors.toMap(
+                i -> accumulator.getAndIncrement(),
+                Function.identity()
+        ));
     }
 }
