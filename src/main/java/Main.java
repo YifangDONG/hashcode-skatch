@@ -6,6 +6,8 @@ import io.ReadOutput;
 import logging.LogObjectFactory;
 import me.tongfei.progressbar.ProgressBar;
 import solution.*;
+import summary.Case;
+import summary.Summary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,26 +18,38 @@ import java.util.stream.Collectors;
 
 public class Main {
 
-    public static final int LOOP = 1;
+    private static final int LOOP = 1;
+    private static final List<Case> CASES = List.of(Case.a, Case.b, Case.c, Case.d, Case.e, Case.f);
+    private static final Input INPUT = new Input("src\\main\\resources\\in\\");
+    private static final Output OUTPUT = new Output("src\\main\\resources\\out\\");
+    private static final Input READ_OUTPUT = new Input("src\\main\\resources\\out\\");
 
     public static void main(String[] args) {
+        testExampleA();
+//        execute();
+//        getResultSummary();
+    }
 
-        List<String> files = List.of(
-                "a_example.txt",
-                "b_read_on.txt",
-                "c_incunabula.txt",
-                "d_tough_choices.txt",
-                "e_so_many_books.txt",
-                "f_libraries_of_the_world.txt");
+    private static void getResultSummary() {
+        for(int c = 0; c < 6; c++) {
+            System.out.println(Summary.getBestScore(CASES.get(c)));
+        }
+    }
 
-        for(int k = 0 ; k < 6; k++) {
-        String file = files.get(k);
+    private static void execute() {
+        for (int c = 0; c < 6; c++) {
+            executeCase(c);
+        }
+    }
+
+    private static void executeCase(int c) {
+        var aCase = CASES.get(c);
+        var lastResult = Summary.getLastResult(aCase);
 
         // read input
-        List<List<String>> content = Input.read(file);
+        List<List<String>> content = INPUT.read(aCase.name());
 
         // adapt input to model
-
         int nBook = Integer.parseInt(content.get(0).get(0));
         int nLib = Integer.parseInt(content.get(0).get(1));
         int nDay = Integer.parseInt(content.get(0).get(2));
@@ -90,9 +104,7 @@ public class Main {
 
         int score = solution.score(nDay, example, idToLibs, books);
         System.out.println(score);
-        for (Integer i : ProgressBar.wrap(Iteration.range(0, LOOP), "generate solution")) {
-            // do something to evaluate the solution
-        }
+
         // adapt result to output
         List<List<String>> result = new ArrayList<>();
         result.add(List.of(String.valueOf(example.size())));
@@ -101,24 +113,74 @@ public class Main {
             result.add(example.get(i).books().stream().map(String::valueOf).collect(Collectors.toList()));
         }
 
-
-//         write output
-            Output.write(file, result);
+        // write output
+        int count = lastResult.count() + 1;
+        OUTPUT.write(String.format("%s\\%d", aCase.name(), count), result);
+        Summary.addResult(aCase, count, score);
     }
-    }
 
-    private static List<Lib> readFromOutput(String file) {
-        List<List<String>> outputContent = ReadOutput.read(file);
+    private static void testExampleA() {
+        var aCase = CASES.get(0);
+
+        // read input
+        List<List<String>> content = INPUT.read(aCase.name());
+
+        // adapt input to model
+        int nBook = Integer.parseInt(content.get(0).get(0));
+        int nLib = Integer.parseInt(content.get(0).get(1));
+        int nDay = Integer.parseInt(content.get(0).get(2));
+
+        List<Integer> bookValues = content.get(1).stream()
+                .mapToInt(Integer::parseInt)
+                .boxed()
+                .collect(Collectors.toList());
+        Map<Integer, Book> books = ListUtils.indexList(bookValues)
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Book::new
+                ));
+
+        List<Library> libs = new ArrayList<>(nLib);
+        AtomicInteger libCount = new AtomicInteger(0);
+        for (int i = 2; i < 2 + 2 * nLib; i += 2) {
+            List<Book> bookInLib = content.get(i + 1)
+                    .stream()
+                    .mapToInt(Integer::parseInt)
+                    .mapToObj(books::get)
+                    .collect(Collectors.toList());
+            Library lib = new Library(
+                    libCount.getAndIncrement(),
+                    Integer.parseInt(content.get(i).get(0)),
+                    Integer.parseInt(content.get(i).get(1)),
+                    Integer.parseInt(content.get(i).get(2)),
+                    bookInLib
+            );
+            libs.add(lib);
+        }
+        Map<Integer, Library> idToLibs = libs.stream()
+                .collect(Collectors.toMap(
+                        Library::id,
+                        Function.identity()
+                ));
+
+        List<List<String>> resultContent = READ_OUTPUT.read("a\\0");
+        // adapt to output model
+        // calculate the score to test the score function is correct
         List<Lib> example = new ArrayList<>();
-        int nlib = Integer.parseInt(outputContent.get(0).get(0));
+        int nlib = Integer.parseInt(resultContent.get(0).get(0));
         for (int i = 1; i < 1 + 2 * nlib; i += 2) {
-            List<Integer> libBooks = outputContent.get(i + 1).stream()
+            List<Integer> libBooks = resultContent.get(i + 1).stream()
                     .mapToInt(Integer::parseInt)
                     .boxed()
                     .collect(Collectors.toList());
-            example.add(new Lib(Integer.parseInt(outputContent.get(i).get(0)), libBooks));
+            example.add(new Lib(Integer.parseInt(resultContent.get(i).get(0)), libBooks));
         }
-        return example;
+
+        SolutionImpl solution = new SolutionImpl();
+        int score = solution.score(nDay, example, idToLibs, books);
+        assert score == 16;
     }
 
 }
