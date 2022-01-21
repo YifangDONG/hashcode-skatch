@@ -2,48 +2,84 @@ import collection.Iteration;
 import collection.ListUtils;
 import io.Input;
 import io.Output;
-import io.ReadOutput;
 import logging.LogObjectFactory;
 import me.tongfei.progressbar.ProgressBar;
 import solution.*;
 import summary.Case;
 import summary.Summary;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Main {
 
-    private static final int LOOP = 1;
+    private static final int LOOP = 100;
     private static final List<Case> CASES = List.of(Case.a, Case.b, Case.c, Case.d, Case.e, Case.f);
     private static final Input INPUT = new Input("src\\main\\resources\\in\\");
     private static final Output OUTPUT = new Output("src\\main\\resources\\out\\");
     private static final Input READ_OUTPUT = new Input("src\\main\\resources\\out\\");
 
     public static void main(String[] args) {
-        testExampleA();
+//        showStatics();
+        executeCase(Case.f);
+//        testExampleA();
 //        execute();
-//        getResultSummary();
+        getResultSummary();
+    }
+
+    private static void showStatics() {
+        // each book has same value, only exist in one lib, each lib scan 1000 books, capacity = 1
+        // => should sort on init days
+        List<List<String>> content = INPUT.read(Case.f.name());
+        int nLib = Integer.parseInt(content.get(0).get(1));
+        Map<Integer, Book> idToBook = getIdToBook(content);
+        List<Library> libs = getLibraries(content, nLib, idToBook);
+//        Integer totalBooks = libs.stream()
+//                .filter(lib -> List.of(30).contains(lib.nDay()) )
+//                .map(library -> library.nBook())
+//                .reduce(0, Integer::sum);
+//        System.out.println(totalBooks);
+//        Set<Book> unitBooks = libs.stream()
+//                .filter(lib -> List.of(30).contains(lib.nDay()))
+//                .flatMap(library -> library.books().stream())
+//                .collect(Collectors.toSet());
+//        System.out.println(unitBooks.size());
+
+//        libs.stream()
+//                .sorted(Comparator.comparingInt(Library::nDay))
+//                .forEach(lib -> System.out.println(lib.nDay() + " " + lib.nBook() + " " + lib.capacity() + " " + lib.books().get(0)));
+        libs.stream()
+                .sorted(Comparator.comparingInt(Library::nDay))
+//                .sorted(Comparator.comparingInt(lib -> totalValue(lib)))
+                .forEach(lib -> System.out.println(lib.nDay() + " " + lib.nBook() + " " + lib.capacity() + " " + totalValue(lib)));
+
+    }
+
+    private static Integer totalValue(Library lib) {
+//        return lib.books().stream().map(Book::score).reduce(0, Integer::sum);
+        return lib.books()
+                .stream()
+                .sorted(Comparator.comparingInt(Book::score))
+                .limit(Math.floorDiv(lib.nBook(), 2))
+                .map(Book::score)
+                .reduce(0, Integer::sum);
     }
 
     private static void getResultSummary() {
-        for(int c = 0; c < 6; c++) {
+        for (int c = 0; c < 6; c++) {
             System.out.println(Summary.getBestScore(CASES.get(c)));
         }
     }
 
     private static void execute() {
         for (int c = 0; c < 6; c++) {
-            executeCase(c);
+            executeCase(CASES.get(c));
         }
     }
 
-    private static void executeCase(int c) {
-        var aCase = CASES.get(c);
+    private static void executeCase(Case aCase) {
         var lastResult = Summary.getLastResult(aCase);
 
         // read input
@@ -54,35 +90,8 @@ public class Main {
         int nLib = Integer.parseInt(content.get(0).get(1));
         int nDay = Integer.parseInt(content.get(0).get(2));
 
-        List<Integer> bookValues = content.get(1).stream()
-                .mapToInt(Integer::parseInt)
-                .boxed()
-                .collect(Collectors.toList());
-        Map<Integer, Book> books = ListUtils.indexList(bookValues)
-                .entrySet()
-                .stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Book::new
-                ));
-
-        List<Library> libs = new ArrayList<>(nLib);
-        AtomicInteger libCount = new AtomicInteger(0);
-        for (int i = 2; i < 2 + 2 * nLib; i += 2) {
-            List<Book> bookInLib = content.get(i + 1)
-                    .stream()
-                    .mapToInt(Integer::parseInt)
-                    .mapToObj(books::get)
-                    .collect(Collectors.toList());
-            Library lib = new Library(
-                    libCount.getAndIncrement(),
-                    Integer.parseInt(content.get(i).get(0)),
-                    Integer.parseInt(content.get(i).get(1)),
-                    Integer.parseInt(content.get(i).get(2)),
-                    bookInLib
-            );
-            libs.add(lib);
-        }
+        Map<Integer, Book> idToBook = getIdToBook(content);
+        List<Library> libs = getLibraries(content, nLib, idToBook);
         Map<Integer, Library> idToLibs = libs.stream()
                 .collect(Collectors.toMap(
                         Library::id,
@@ -96,27 +105,80 @@ public class Main {
 //        List<Lib> example = readFromOutput("b_18.out");
 //        List<Lib> example = solution.unit_test_a();
 //        List<Lib> example = solution.dummy(libs);
-//        List<Lib> example = solution.sortByBookValue(libs);
-        List<Lib> example = solution.sortByBookValueAndLibInitDay(libs);
+//        List<Lib> example = solution.sortByBookValueAndLibInitDay(libs);
 //            List<Lib> example = solution.sortByBookValueAndLibBook(libs);
 //            List<Lib> example = solution.sortByBookValueAndLibBookCount(libs);
 //            List<Lib> example = solution.sortByBookValueAndLibCapacity(libs);
+//            List<Lib> example = solution.solutionC(libs);
+//        List<Lib> example = solution.sortByTotalBookValue(libs);
+//        List<Lib> example = solution.generateUniqueBook(libs, nDay);
 
-        int score = solution.score(nDay, example, idToLibs, books);
-        System.out.println(score);
+        int bestScore = 0;
+        List<Lib> bestSolution = new ArrayList<>();
+        List<Library> toShuffle = new ArrayList<>(libs);
+//        for(Integer l : ProgressBar.wrap(Iteration.range(0, LOOP), "generate solution")) {
+        for(int l =0; l < 500; l++) {
+            Collections.shuffle(toShuffle);
+            List<Lib> example = solution.sortByBookValue(toShuffle);
+            int score = solution.score(nDay, example, idToLibs, idToBook);
+            if(score > bestScore) {
+                bestScore = score;
+                bestSolution = example;
+            }
+            if (score > 3604074) {
+                System.out.println(score);
+            }
+        }
 
         // adapt result to output
         List<List<String>> result = new ArrayList<>();
-        result.add(List.of(String.valueOf(example.size())));
-        for (int i = 0; i < example.size(); i++) {
-            result.add(List.of(String.valueOf(example.get(i).id()), String.valueOf(example.get(i).books().size())));
-            result.add(example.get(i).books().stream().map(String::valueOf).collect(Collectors.toList()));
+        result.add(List.of(String.valueOf(bestSolution.size())));
+        for (int i = 0; i < bestSolution.size(); i++) {
+            result.add(List.of(String.valueOf(bestSolution.get(i).id()), String.valueOf(bestSolution.get(i).books().size())));
+            result.add(bestSolution.get(i).books().stream().map(String::valueOf).collect(Collectors.toList()));
         }
 
         // write output
         int count = lastResult.count() + 1;
         OUTPUT.write(String.format("%s\\%d", aCase.name(), count), result);
-        Summary.addResult(aCase, count, score);
+        Summary.addResult(aCase, count, bestScore);
+    }
+
+    private static List<Library> getLibraries(List<List<String>> content, int nLib, Map<Integer, Book> idToBook) {
+        List<Library> libs = new ArrayList<>(nLib);
+        AtomicInteger libCount = new AtomicInteger(0);
+        for (int i = 2; i < 2 + 2 * nLib; i += 2) {
+            List<Book> bookInLib = content.get(i + 1)
+                    .stream()
+                    .mapToInt(Integer::parseInt)
+                    .mapToObj(idToBook::get)
+                    .collect(Collectors.toList());
+            Library lib = new Library(
+                    libCount.getAndIncrement(),
+                    Integer.parseInt(content.get(i).get(0)),
+                    Integer.parseInt(content.get(i).get(1)),
+                    Integer.parseInt(content.get(i).get(2)),
+                    bookInLib
+            );
+            libs.add(lib);
+        }
+        return libs;
+    }
+
+    private static Map<Integer, Book> getIdToBook(List<List<String>> content) {
+        Map<Integer, Book> books = ListUtils.indexList(
+                        content.get(1).stream()
+                                .mapToInt(Integer::parseInt)
+                                .boxed()
+                                .collect(Collectors.toList())
+                )
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Book::new
+                ));
+        return books;
     }
 
     private static void testExampleA() {
@@ -130,36 +192,9 @@ public class Main {
         int nLib = Integer.parseInt(content.get(0).get(1));
         int nDay = Integer.parseInt(content.get(0).get(2));
 
-        List<Integer> bookValues = content.get(1).stream()
-                .mapToInt(Integer::parseInt)
-                .boxed()
-                .collect(Collectors.toList());
-        Map<Integer, Book> books = ListUtils.indexList(bookValues)
-                .entrySet()
+        Map<Integer, Book> books = getIdToBook(content);
+        Map<Integer, Library> idToLibs = getLibraries(content, nLib, books)
                 .stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Book::new
-                ));
-
-        List<Library> libs = new ArrayList<>(nLib);
-        AtomicInteger libCount = new AtomicInteger(0);
-        for (int i = 2; i < 2 + 2 * nLib; i += 2) {
-            List<Book> bookInLib = content.get(i + 1)
-                    .stream()
-                    .mapToInt(Integer::parseInt)
-                    .mapToObj(books::get)
-                    .collect(Collectors.toList());
-            Library lib = new Library(
-                    libCount.getAndIncrement(),
-                    Integer.parseInt(content.get(i).get(0)),
-                    Integer.parseInt(content.get(i).get(1)),
-                    Integer.parseInt(content.get(i).get(2)),
-                    bookInLib
-            );
-            libs.add(lib);
-        }
-        Map<Integer, Library> idToLibs = libs.stream()
                 .collect(Collectors.toMap(
                         Library::id,
                         Function.identity()
