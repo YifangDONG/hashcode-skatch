@@ -1,9 +1,7 @@
-import collection.Iteration;
 import collection.ListUtils;
 import io.Input;
 import io.Output;
 import logging.LogObjectFactory;
-import me.tongfei.progressbar.ProgressBar;
 import solution.*;
 import summary.Case;
 import summary.Summary;
@@ -23,7 +21,7 @@ public class Main {
 
     public static void main(String[] args) {
 //        showStatics();
-        executeCase(Case.f);
+        executeCase(Case.e);
 //        testExampleA();
 //        execute();
         getResultSummary();
@@ -102,33 +100,10 @@ public class Main {
         // calculate result
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
 
-//        List<Lib> example = readFromOutput("b_18.out");
-//        List<Lib> example = solution.unit_test_a();
-//        List<Lib> example = solution.dummy(libs);
-//        List<Lib> example = solution.sortByBookValueAndLibInitDay(libs);
-//            List<Lib> example = solution.sortByBookValueAndLibBook(libs);
-//            List<Lib> example = solution.sortByBookValueAndLibBookCount(libs);
-//            List<Lib> example = solution.sortByBookValueAndLibCapacity(libs);
-//            List<Lib> example = solution.solutionC(libs);
-//        List<Lib> example = solution.sortByTotalBookValue(libs);
-//        List<Lib> example = solution.generateUniqueBook(libs, nDay);
 
-        int bestScore = 0;
-        List<Lib> bestSolution = new ArrayList<>();
-        List<Library> toShuffle = new ArrayList<>(libs);
-//        for(Integer l : ProgressBar.wrap(Iteration.range(0, LOOP), "generate solution")) {
-        for(int l =0; l < 500; l++) {
-            Collections.shuffle(toShuffle);
-            List<Lib> example = solution.sortByBookValue(toShuffle);
-            int score = solution.score(nDay, example, idToLibs, idToBook);
-            if(score > bestScore) {
-                bestScore = score;
-                bestSolution = example;
-            }
-            if (score > 3604074) {
-                System.out.println(score);
-            }
-        }
+        List<Lib> bestSolution = solution.greedy(libs, nDay);
+        int bestScore = solution.score(nDay, bestSolution, idToLibs, idToBook);
+        System.out.println(bestScore);
 
         // adapt result to output
         List<List<String>> result = new ArrayList<>();

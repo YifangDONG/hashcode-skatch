@@ -3,6 +3,7 @@ package solution;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
+import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 
 public interface Solution {
@@ -21,10 +22,66 @@ public interface Solution {
                 .collect(Collectors.toList());
     }
 
+    default List<Lib> greedy(List<Library> libraries, int nDay) {
+        List<Library> toChose = new ArrayList<>(libraries);
+        int currentDay = 0;
+        List<Lib> result = new ArrayList<>();
+        Set<Integer> scannedBooks = new HashSet<>();
+        while(currentDay < nDay) {
+            Library lib = getBestLibrary(toChose, nDay - currentDay, scannedBooks);
+            if(lib == null) {
+                break;
+            }
+            toChose.remove(lib);
+            currentDay += lib.nDay();
+
+            long totalCap = (nDay - currentDay) * lib.capacity();
+            List<Integer> scanned = lib.books()
+                    .stream()
+                    .filter(book -> !scannedBooks.contains(book.id()))
+                    .sorted(Comparator.comparingInt(Book::score).reversed())
+                    .limit(totalCap)
+                    .map(Book::id)
+                    .collect(Collectors.toList());
+            scannedBooks.addAll(scanned);
+            result.add(new Lib(lib.id(), scanned));
+        }
+        return result;
+    }
+
+    private Library getBestLibrary(List<Library> libraries, int remainDay, Set<Integer> scannedBooks) {
+        long bestScore = 0;
+        Library best = null;
+        for(Library library : libraries) {
+            long score = getLibScore(library, remainDay, scannedBooks);
+            if(score > bestScore) {
+                bestScore = score;
+                best = library;
+            }
+        }
+
+        return best;
+    }
+
+    private long getLibScore(Library library, int remainDay, Set<Integer> scannedBooks) {
+        int days = remainDay - library.nDay();
+        if(days <= 0) {
+            return 0;
+        }
+        long score = library.books().stream()
+                .filter(book -> !scannedBooks.contains(book.id()))
+                .sorted(Comparator.comparingInt(Book::score).reversed())
+                .limit(days * library.capacity())
+                .map(Book::score)
+                .map(Long::valueOf)
+                .reduce(0L, Long::sum);
+        return score / library.nDay();
+    }
+
     default List<Lib> generateUniqueBook(List<Library> libraries, int nday) {
         List<Library> libs = libraries.stream()
                 .sorted(Comparator.comparingInt(compareInitDayByN())
-                        .thenComparing(Comparator.comparingInt(compareBookValueF()).reversed())
+                        .thenComparing(Comparator.comparingLong(compareBookValueF()).reversed())
                         .thenComparing(Comparator.comparingLong(Library::capacity).reversed()))
 //                        .thenComparingInt(Library::nDay)
                 .collect(Collectors.toList());
@@ -58,7 +115,7 @@ public interface Solution {
 
     default List<Lib> sortByTotalBookValue(List<Library> libraries) {
         return libraries.stream()
-                .sorted(Comparator.comparingInt(compareBookValue()).reversed())
+                .sorted(Comparator.comparingLong(compareBookValue()).reversed())
                 .map(bookSortedByValue())
                 .collect(Collectors.toList());
     }
@@ -66,27 +123,31 @@ public interface Solution {
     default List<Lib> solutionC(List<Library> libraries) {
         return libraries.stream()
                 .sorted(Comparator.comparingInt(Library::nDay)
-                        .thenComparing(Comparator.comparingInt(compareBookValue())))
-                .sorted(Comparator.comparingInt(compareBookValue()))
+                        .thenComparing(Comparator.comparingLong(compareBookValue()).reversed()))
                 .map(bookSortedByValue())
                 .collect(Collectors.toList());
     }
 
-    private ToIntFunction<Library> compareBookValue() {
-        return lib -> lib.books().stream().map(Book::score).reduce(0, Integer::sum);
+    private ToLongFunction<Library> compareBookValue() {
+        return lib -> lib.books()
+                .stream()
+                .map(Book::score)
+                .map(Long::valueOf)
+                .reduce(0L, Long::sum);
     }
 
-   private ToIntFunction<Library> compareInitDayByN() {
+    private ToIntFunction<Library> compareInitDayByN() {
         return lib -> Math.floorDiv(lib.nDay(), 10);
     }
 
-    private ToIntFunction<Library> compareBookValueF() {
+    private ToLongFunction<Library> compareBookValueF() {
         return lib -> Math.floorDiv(lib.books()
                 .stream()
                 .sorted(Comparator.comparingInt(Book::score))
                 .limit(Math.floorDiv(lib.nBook(), 2))
                 .map(Book::score)
-                .reduce(0, Integer::sum), 10000);
+                .map(Long::valueOf)
+                .reduce(0L, Long::sum), 10000);
     }
 
     default List<Lib> sortByBookValueAndLibInitDay(List<Library> libraries) {
