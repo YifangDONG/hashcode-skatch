@@ -3,12 +3,13 @@ import io.Input;
 import io.Output;
 import logging.LogObjectFactory;
 import me.tongfei.progressbar.ProgressBar;
+import solution.InputAdapter;
+import solution.OutputAdapter;
 import solution.Solution;
 import solution.SolutionImpl;
 import summary.Case;
 import summary.Summary;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
@@ -29,6 +30,7 @@ public class Main {
     private static void testExampleA() {
         List<List<String>> resultContent = READ_OUTPUT.read("a\\0");
         // adapt to output model
+        InputAdapter inputAdapter = new InputAdapter(resultContent);
         // calculate the score to test the score function is correct
     }
 
@@ -40,18 +42,19 @@ public class Main {
 
     private static void execute() {
         for (int c = 0; c < 6; c++) {
-            executeCase(c);
+            executeCase(CASES.get(c));
         }
     }
 
-    private static void executeCase(int c) {
-        var aCase = CASES.get(c);
+    private static void executeCase(Case aCase) {
+
         var lastResult = Summary.getLastResult(aCase);
 
         // read input
         List<List<String>> content = INPUT.read(aCase.name());
 
         // adapt input to model
+        InputAdapter inputAdapter = new InputAdapter(content);
 
         // calculate score
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
@@ -63,7 +66,7 @@ public class Main {
         // adapt score to output
 
         // write output
-        List<List<String>> result = new ArrayList<>();
+        List<List<String>> result = OutputAdapter.adapt();
         OUTPUT.write(String.format("%s\\%d", aCase.name(), count), result);
         Summary.addResult(aCase, count, score);
     }
