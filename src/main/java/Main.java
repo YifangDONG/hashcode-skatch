@@ -28,21 +28,21 @@ public class Main {
     }
 
     private static void testExampleA() {
-        List<List<String>> resultContent = READ_OUTPUT.read("a\\0");
         // adapt to output model
-        InputAdapter inputAdapter = new InputAdapter(resultContent);
+        InputAdapter inputAdapter = new InputAdapter(INPUT.read(Case.a.name()));
+        InputAdapter resultAdapter = new InputAdapter(READ_OUTPUT.read("a\\0"));
         // calculate the score to test the score function is correct
     }
 
     private static void getResultSummary() {
-        for(int c = 0; c < 6; c++) {
-            System.out.println(Summary.getBestScore(CASES.get(c)));
+        for (Case aCase : CASES) {
+            System.out.println(Summary.getBestScore(aCase));
         }
     }
 
     private static void execute() {
-        for (int c = 0; c < 6; c++) {
-            executeCase(CASES.get(c));
+        for (Case aCase : CASES) {
+            executeCase(aCase);
         }
     }
 
@@ -66,8 +66,8 @@ public class Main {
         // adapt score to output
 
         // write output
-        List<List<String>> result = OutputAdapter.adapt();
-        OUTPUT.write(String.format("%s\\%d", aCase.name(), count), result);
+        List<List<String>> outputContent = OutputAdapter.adapt();
+        OUTPUT.write(String.format("%s\\%d", aCase.name(), count), outputContent);
         Summary.addResult(aCase, count, score);
     }
 
