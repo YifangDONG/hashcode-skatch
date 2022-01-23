@@ -21,16 +21,43 @@ public class Main {
 
     public static void main(String[] args) {
 //        showStatics();
-        executeCase(Case.e);
+        executeCase(Case.d);
 //        testExampleA();
 //        execute();
         getResultSummary();
     }
 
+    private static void staticsD() {
+        List<List<String>> content = INPUT.read(Case.d.name());
+        int nLib = Integer.parseInt(content.get(0).get(1));
+        Map<Integer, Book> idToBook = getIdToBook(content);
+        List<Library> libs = getLibraries(content, nLib, idToBook);
+        Map<Integer, Integer> booksFreq = ListUtils.valueCountInt(libs.stream()
+                .map(Library::nBook)
+                .collect(Collectors.toList()));
+        System.out.println(booksFreq);
+        Map<Integer, Integer> booksInLib = bookInLib(libs);
+        Map<Integer, Long> freq = booksInLib.values().stream().
+                collect(Collectors.groupingBy(Function.identity(),
+                        Collectors.counting()));
+        System.out.println(freq);
+    }
+
+    private static Map<Integer, Integer> bookInLib(List<Library> libs) {
+        Map<Integer, Integer> booksInLib = new HashMap<>();
+        for (Library library : libs) {
+            for (Book book : library.books()) {
+                Integer current = booksInLib.getOrDefault(book.id(), 0);
+                booksInLib.put(book.id(), current + 1);
+            }
+        }
+        return booksInLib;
+    }
+
     private static void showStatics() {
         // each book has same value, only exist in one lib, each lib scan 1000 books, capacity = 1
         // => should sort on init days
-        List<List<String>> content = INPUT.read(Case.f.name());
+        List<List<String>> content = INPUT.read(Case.d.name());
         int nLib = Integer.parseInt(content.get(0).get(1));
         Map<Integer, Book> idToBook = getIdToBook(content);
         List<Library> libs = getLibraries(content, nLib, idToBook);
@@ -48,10 +75,20 @@ public class Main {
 //        libs.stream()
 //                .sorted(Comparator.comparingInt(Library::nDay))
 //                .forEach(lib -> System.out.println(lib.nDay() + " " + lib.nBook() + " " + lib.capacity() + " " + lib.books().get(0)));
-        libs.stream()
-                .sorted(Comparator.comparingInt(Library::nDay))
+        Map<Integer, Integer> booksFreq = ListUtils.valueCountInt(libs.stream()
+                .map(Library::nBook)
+                .collect(Collectors.toList()));
+        System.out.println(booksFreq);
+
+        Map<Integer, Integer> booksInLib = bookInLib(libs);
+        Map<Integer, Long> freq = booksInLib.values().stream().
+                collect(Collectors.groupingBy(Function.identity(),
+                        Collectors.counting()));
+        System.out.println(freq);
+//        libs.stream()
+//                .sorted(Comparator.comparingInt(Library::nDay))
 //                .sorted(Comparator.comparingInt(lib -> totalValue(lib)))
-                .forEach(lib -> System.out.println(lib.nDay() + " " + lib.nBook() + " " + lib.capacity() + " " + totalValue(lib)));
+//                .forEach(lib -> System.out.println(lib.nDay() + " " + lib.nBook() + " " + lib.capacity() + " " + totalValue(lib)));
 
     }
 
@@ -101,7 +138,7 @@ public class Main {
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
 
 
-        List<Lib> bestSolution = solution.greedy(libs, nDay);
+        List<Lib> bestSolution = solution.solutionD(idToLibs, nDay, nBook, nLib);
         int bestScore = solution.score(nDay, bestSolution, idToLibs, idToBook);
         System.out.println(bestScore);
 
