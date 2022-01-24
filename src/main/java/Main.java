@@ -19,9 +19,24 @@ public class Main {
     public static void main(String[] args) {
 
 //        testExampleA();
-        execute();
-//        executeCase(Case.b);
-        getResultSummary();
+//        execute();
+        executeCase(Case.e);
+//        getResultSummary();
+//        scoreLimit();
+    }
+
+    private static void scoreLimit() {
+        for (Case aCase : CASES) {
+            InputAdapter inputAdapter = new InputAdapter(INPUT.read(aCase.name()));
+            int score = 0;
+            int bonus = inputAdapter.getBonus();
+            List<Ride> rides = inputAdapter.getRides();
+            score += bonus * rides.size();
+            for (Ride ride : rides) {
+                score += ride.start().distance(ride.end());
+            }
+            System.out.println(aCase.name() + " : " + score);
+        }
     }
 
     private static void testExampleA() {
@@ -68,7 +83,7 @@ public class Main {
 
         // calculate score
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
-        List<Assign> result = solution.greedy(rides, nSteps, nVehicles, bonus);
+        List<Assign> result = solution.greedyE(rides, nSteps, nVehicles, bonus);
 
         long score = solution.score(result, nSteps, nVehicles, bonus);
         int count = lastResult.count() + 1;
