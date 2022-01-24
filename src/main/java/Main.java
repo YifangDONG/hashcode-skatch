@@ -20,6 +20,7 @@ public class Main {
 
 //        testExampleA();
         execute();
+//        executeCase(Case.b);
         getResultSummary();
     }
 
@@ -40,14 +41,14 @@ public class Main {
     }
 
     private static void getResultSummary() {
-        for(int c = 0; c < CASES.size(); c++) {
-            System.out.println(Summary.getBestScore(CASES.get(c)));
+        for (Case aCase : CASES) {
+            System.out.println(Summary.getBestScore(aCase));
         }
     }
 
     private static void execute() {
-        for (int c = 0; c < CASES.size(); c++) {
-            executeCase(CASES.get(c));
+        for (Case aCase : CASES) {
+            executeCase(aCase);
         }
     }
 
@@ -67,7 +68,7 @@ public class Main {
 
         // calculate score
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
-        List<Assign> result = solution.dummy(rides, nVehicles);
+        List<Assign> result = solution.minWastDistance(rides, nSteps, nVehicles);
 
         long score = solution.score(result, nSteps, nVehicles, bonus);
         int count = lastResult.count() + 1;

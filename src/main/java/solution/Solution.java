@@ -1,6 +1,7 @@
 package solution;
 
-import org.checkerframework.checker.units.qual.A;
+import collection.Iteration;
+import me.tongfei.progressbar.ProgressBar;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -8,13 +9,76 @@ import java.util.stream.Collectors;
 public interface Solution {
     // default impl is done in the interface to be able to use the logging
 
+    default List<Assign> minWastDistance(List<Ride> rides, int steps, int vehicle) {
+        // assign rides to vehicle one by one, min wast distance
+        List<Ride> candidate = new ArrayList<>(rides);
+        List<Assign> result = new ArrayList<>();
+        Pair pos = new Pair(0, 0);
+
+        for (int i : ProgressBar.wrap(Iteration.range(0, vehicle), "Assign rides")) {
+            if (candidate.isEmpty()) {
+                result.add(new Assign(Collections.emptyList()));
+            } else {
+                var assignedRides = new ArrayList<Ride>();
+                int t = 0;
+                while (t < steps) {
+                    if(candidate.isEmpty()) {
+                        break;
+                    }
+                    var next = findCloest(candidate, pos, t);
+                    candidate.remove(next);
+                    assignedRides.add(next);
+                    t += pos.distance(next.start());
+                    t += next.start().distance(next.end());
+                    pos = next.end();
+                }
+                result.add(new Assign(assignedRides));
+            }
+        }
+        return result;
+    }
+
+    private Ride findCloest(List<Ride> rides, Pair pos, int t) {
+        Ride ride = rides.get(0);
+        int dist = pos.distance(ride.start());
+        for (Ride curr : rides) {
+            int distance = pos.distance(curr.start());
+            //skip if cannot finish on time
+            if (distance < dist && canFinishAndHasBonus(curr, pos, t)) {
+                dist = distance;
+                ride = curr;
+            }
+        }
+        return ride;
+    }
+
+    private boolean canFinish(Ride curr, Pair pos, int posTime) {
+        int t = posTime + pos.distance(curr.start());
+        if (t < curr.startT()) {
+            t = curr.startT();
+        }
+        t += curr.start().distance(curr.end());
+        return t <= curr.endT();
+    }
+
+    private boolean canFinishAndHasBonus(Ride curr, Pair pos, int posTime) {
+        int t = posTime + pos.distance(curr.start());
+        boolean hasbonus = false;
+        if (t < curr.startT()) {
+            t = curr.startT();
+            hasbonus = true;
+        }
+        t += curr.start().distance(curr.end());
+        return t <= curr.endT() && hasbonus;
+    }
+
     default List<Assign> dummy(List<Ride> rides, int vehicle) {
         Deque<Ride> candidate = new ArrayDeque<>(rides);
         Map<Integer, Assign> result = new HashMap<>();
         int i = 0;
         while (!candidate.isEmpty()) {
             int key = i % vehicle;
-            if(result.get(key) == null) {
+            if (result.get(key) == null) {
                 result.put(key, new Assign(new ArrayList<>()));
             }
             result.get(key).rides().add(candidate.pop());
@@ -41,7 +105,7 @@ public interface Solution {
         Pair pos = new Pair(0, 0);
         boolean start = false;
         boolean hasBonus = false;
-        while(r < rides.size()) {
+        while (r < rides.size()) {
             Ride ride = rides.get(r);
             if (t > steps) {
                 return score;
@@ -57,9 +121,9 @@ public interface Solution {
 
             } else {
                 int distance = ride.start().distance(ride.end());
-                if(t + distance <= ride.endT()) {
+                if (t + distance <= ride.endT()) {
                     score += distance;
-                    if(hasBonus) {
+                    if (hasBonus) {
                         score += bonus;
                     }
                 }
