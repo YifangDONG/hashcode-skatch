@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 public interface Solution {
     // default impl is done in the interface to be able to use the logging
 
-    default List<Assign> minWastDistance(List<Ride> rides, int steps, int vehicle) {
+    default List<Assign> greedy(List<Ride> rides, int steps, int vehicle, int bonus) {
         // assign rides to vehicle one by one, min wast distance
         List<Ride> candidate = new ArrayList<>(rides);
         List<Assign> result = new ArrayList<>();
@@ -25,7 +25,7 @@ public interface Solution {
                     if(candidate.isEmpty()) {
                         break;
                     }
-                    var next = findCloest(candidate, pos, t);
+                    var next = maxReward(candidate, pos, t, bonus);
                     candidate.remove(next);
                     assignedRides.add(next);
                     t += pos.distance(next.start());
@@ -37,6 +37,37 @@ public interface Solution {
         }
         return result;
     }
+    private Ride maxReward(List<Ride> rides, Pair pos, int t, int bonus) {
+        Ride ride = rides.get(0);
+        int maxReward = 0;
+        for (Ride curr : rides) {
+            int currentReward = getReward(curr, pos, t, bonus);
+            if (currentReward > maxReward) {
+                maxReward = currentReward;
+                ride = curr;
+            }
+        }
+        return ride;
+    }
+
+    private int getReward(Ride curr, Pair pos, int posTime, int bonus) {
+        int t = posTime + pos.distance(curr.start());
+        boolean hasbonus = false;
+        if (t < curr.startT()) {
+            t = curr.startT();
+            hasbonus = true;
+        }
+        t += curr.start().distance(curr.end());
+        int reward = 0;
+        if (t <= curr.endT()) {
+            reward += curr.start().distance(curr.end());
+            if(hasbonus) {
+                reward += bonus;
+            }
+        }
+        return reward;
+    }
+
 
     private Ride findCloest(List<Ride> rides, Pair pos, int t) {
         Ride ride = rides.get(0);

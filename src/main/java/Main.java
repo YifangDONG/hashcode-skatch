@@ -68,7 +68,7 @@ public class Main {
 
         // calculate score
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
-        List<Assign> result = solution.minWastDistance(rides, nSteps, nVehicles);
+        List<Assign> result = solution.greedy(rides, nSteps, nVehicles, bonus);
 
         long score = solution.score(result, nSteps, nVehicles, bonus);
         int count = lastResult.count() + 1;
