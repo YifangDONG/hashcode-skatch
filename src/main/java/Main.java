@@ -19,9 +19,9 @@ public class Main {
     public static void main(String[] args) {
 
 //        testExampleA();
-//        execute();
-        executeCase(Case.e);
-//        getResultSummary();
+        execute();
+//        executeCase(Case.e);
+        getResultSummary();
 //        scoreLimit();
     }
 
@@ -83,7 +83,7 @@ public class Main {
 
         // calculate score
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
-        List<Assign> result = solution.greedyE(rides, nSteps, nVehicles, bonus);
+        List<Assign> result = solution.minWastTime(rides, nSteps, nVehicles, bonus);
 
         long score = solution.score(result, nSteps, nVehicles, bonus);
         int count = lastResult.count() + 1;

@@ -9,6 +9,55 @@ import java.util.stream.Collectors;
 public interface Solution {
     // default impl is done in the interface to be able to use the logging
 
+    default List<Assign> minWastTime(List<Ride> rides, int steps, int nVehicle, int bonus) {
+        // the wastTime = time spent by car without getting reward
+
+        List<Ride> candidate = new ArrayList<>(rides);
+        candidate.sort(Comparator.comparingInt(Ride::endT));
+        List<Assign> result = new ArrayList<>();
+        List<Integer> posTimes = new ArrayList<>();
+
+        for (int i = 0; i < nVehicle; i++) {
+            result.add(new Assign(new ArrayList<>()));
+            posTimes.add(0);
+        }
+
+        while (!candidate.isEmpty()) {
+            if (candidate.size() % 100 == 0) {
+                System.err.println(candidate.size());
+            }
+            Ride toAssign = candidate.get(0);
+            int wastTime = Integer.MAX_VALUE;
+            int vehicle = -1;
+            for (int j = 0; j < nVehicle; j++) {
+                Integer posTime = posTimes.get(j);
+                if (posTime < steps) {
+
+                    Pair pos;
+                    if (result.get(j).rides().isEmpty()) {
+                        pos = new Pair(0, 0);
+                    } else {
+                        pos = result.get(j).rides().get(result.get(j).rides().size() - 1).end();
+                    }
+                    int currWast = Math.max(toAssign.startT() - posTime, pos.distance(toAssign.start()));
+                    if (currWast < wastTime) {
+                        wastTime = currWast;
+                        vehicle = j;
+                    }
+                }
+            }
+            if (vehicle == -1) {
+                // break if every car doesn't have time
+                break;
+            }
+            result.get(vehicle).rides().add(toAssign);
+            int posTime = posTimes.get(vehicle) + wastTime;
+            posTimes.set(vehicle, posTime);
+            candidate.remove(0);
+        }
+        return result;
+    }
+
     default List<Assign> greedyE(List<Ride> rides, int steps, int vehicle, int bonus) {
         // E has high bonus, the aime is each assigned ride should have bonus
 
@@ -26,7 +75,6 @@ public interface Solution {
             if (candidate.size() % 100 == 0) {
                 System.err.println(candidate.size());
             }
-//        for (int i : ProgressBar.wrap(Iteration.range(0, rides.size()), "Assign rides")) {
             for (int j = 0; j < vehicle; j++) {
                 Pair pos;
                 if (result.get(j).rides().isEmpty()) {
@@ -64,7 +112,7 @@ public interface Solution {
                 rest.remove(ride);
                 result.get(j).rides().add(ride);
                 int t = posTimes.get(j) + pos.distance(ride.start()) + ride.start().distance(ride.end());
-                posTimes.set(j,t);
+                posTimes.set(j, t);
             }
         }
         return result;
@@ -73,6 +121,7 @@ public interface Solution {
     default List<Assign> greedy(List<Ride> rides, int steps, int vehicle, int bonus) {
         // assign rides to vehicle one by one, min wast distance
         List<Ride> candidate = new ArrayList<>(rides);
+        candidate.sort(Comparator.comparingInt(Ride::endT));
         List<Assign> result = new ArrayList<>();
         Pair pos = new Pair(0, 0);
 
