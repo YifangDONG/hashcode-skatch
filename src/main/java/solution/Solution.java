@@ -274,6 +274,7 @@ public interface Solution {
                         score += bonus;
                     }
                 }
+                t += distance;
                 pos = ride.end();
                 r++;
                 start = false;
