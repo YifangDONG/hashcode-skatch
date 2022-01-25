@@ -22,6 +22,7 @@ public interface Solution {
             posTimes.add(0);
         }
 
+        int finishedCar = 0;
         while (!candidate.isEmpty()) {
             if (candidate.size() % 100 == 0) {
                 System.err.println(candidate.size());
@@ -31,8 +32,9 @@ public interface Solution {
             int vehicle = -1;
             for (int j = 0; j < nVehicle; j++) {
                 Integer posTime = posTimes.get(j);
-                if (posTime < steps) {
-
+                if (posTime >= steps) {
+                    finishedCar++;
+                } else {
                     Pair pos;
                     if (result.get(j).rides().isEmpty()) {
                         pos = new Pair(0, 0);
@@ -40,25 +42,28 @@ public interface Solution {
                         pos = result.get(j).rides().get(result.get(j).rides().size() - 1).end();
                     }
                     int currWast = Math.max(toAssign.startT() - posTime, pos.distance(toAssign.start()));
-                    if (currWast < wastTime) {
+                    if (currWast < wastTime && canFinishAndHasBonus(toAssign, pos, posTime)) {
                         wastTime = currWast;
                         vehicle = j;
                     }
                 }
             }
-            if (vehicle == -1) {
+            if (finishedCar == nVehicle) {
                 // break if every car doesn't have time
                 break;
+            }else if (vehicle == -1) {
+                candidate.remove(0);
+            }else {
+                result.get(vehicle).rides().add(toAssign);
+                int posTime = posTimes.get(vehicle) + wastTime;
+                posTimes.set(vehicle, posTime);
+                candidate.remove(0);
             }
-            result.get(vehicle).rides().add(toAssign);
-            int posTime = posTimes.get(vehicle) + wastTime;
-            posTimes.set(vehicle, posTime);
-            candidate.remove(0);
         }
         return result;
     }
 
-    default List<Assign> greedyE(List<Ride> rides, int steps, int vehicle, int bonus) {
+    default List<Assign> greedyE(List<Ride> rides, final int steps, final int vehicle, final int bonus) {
         // E has high bonus, the aime is each assigned ride should have bonus
 
         Deque<Ride> candidate = new ArrayDeque<>(rides);

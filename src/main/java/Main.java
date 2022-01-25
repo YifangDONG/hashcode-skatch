@@ -19,10 +19,11 @@ public class Main {
     public static void main(String[] args) {
 
 //        testExampleA();
-        execute();
+//        execute();
 //        executeCase(Case.e);
-        getResultSummary();
+//        getResultSummary();
 //        scoreLimit();
+        outputStatic();
     }
 
     private static void scoreLimit() {
@@ -37,6 +38,18 @@ public class Main {
             }
             System.out.println(aCase.name() + " : " + score);
         }
+    }
+
+    private static void outputStatic() {
+        // adapt to output model
+        InputAdapter inputAdapter = new InputAdapter(INPUT.read(Case.e.name()));
+        Map<Integer, Ride> idToRide = inputAdapter.getIdToRide();
+        InputAdapter resultAdapter = new InputAdapter(READ_OUTPUT.read("e\\12"));
+        List<Assign> assigns = resultAdapter.readOutput(idToRide);
+        Integer totalRides = assigns.stream()
+                .map(assign -> assign.rides().size())
+                .reduce(0, Integer::sum);
+        System.out.println(totalRides);
     }
 
     private static void testExampleA() {
