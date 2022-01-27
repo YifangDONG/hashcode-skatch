@@ -2,12 +2,82 @@ package solution;
 
 import collection.Iteration;
 import me.tongfei.progressbar.ProgressBar;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
 public interface Solution {
     // default impl is done in the interface to be able to use the logging
+    default List<Assign> greedyC(List<Ride> rides, int steps, int nVehicle, int bonus) {
+        // C: All ride start and end the same time, bonus = 1
+        // => max the number of ride
+        // => target is to have 10000/81 = 123 ride per car
+        // current greedy on min wast time give 96 ride per car
+        // after loop 10000 times, find max assigned ride is 8220,
+        // next step is to max the distance of assigned ride
+
+        int maxRide = 0;
+        List<Assign> bestResult = new ArrayList<>();
+        for(int rep : ProgressBar.wrap(Iteration.range(0, 10000), "loop")) {
+            if(rep % 1000 == 0) {
+                System.err.println(maxRide);
+            }
+
+            int currNRides = 0;
+            List<Ride> candidate = new ArrayList<>(rides);
+//            ToIntFunction<Ride> rideToIntFunction = ride -> ride.start().distance(ride.end());
+            Collections.shuffle(candidate);
+            List<Assign> result = new ArrayList<>();
+            List<Integer> posTimes = new ArrayList<>();
+
+            for (int i = 0; i < nVehicle; i++) {
+                result.add(new Assign(new ArrayList<>()));
+                posTimes.add(0);
+            }
+
+            int finishedCar = 0;
+            while (!candidate.isEmpty()) {
+                Ride toAssign = candidate.get(0);
+                int wastTime = Integer.MAX_VALUE;
+                int vehicle = -1;
+                for (int j = 0; j < nVehicle; j++) {
+                    Integer posTime = posTimes.get(j);
+                    if (posTime >= steps) {
+                        finishedCar++;
+                    } else {
+                        Pair pos;
+                        if (result.get(j).rides().isEmpty()) {
+                            pos = new Pair(0, 0);
+                        } else {
+                            pos = result.get(j).rides().get(result.get(j).rides().size() - 1).end();
+                        }
+                        int currWast = Math.max(toAssign.startT() - posTime, pos.distance(toAssign.start()));
+                        if (currWast < wastTime && canFinish(toAssign, pos, posTime)) {
+                            wastTime = currWast;
+                            vehicle = j;
+                        }
+                    }
+                }
+                if (finishedCar == nVehicle) {
+                    // break if every car doesn't have time
+                    break;
+                }else if (vehicle == -1) {
+                    candidate.remove(0);
+                }else {
+                    result.get(vehicle).rides().add(toAssign);
+                    int posTime = posTimes.get(vehicle) + wastTime + toAssign.start().distance(toAssign.end());
+                    posTimes.set(vehicle, posTime);
+                    candidate.remove(0);
+                    currNRides++;
+                }
+            }
+            if(currNRides > maxRide) {
+                maxRide = currNRides;
+                bestResult = result;
+            }
+        }
+
+        return bestResult;
+    }
 
     default List<Assign> minWastTime(List<Ride> rides, int steps, int nVehicle, int bonus) {
         // the wastTime = time spent by car without getting reward
@@ -42,7 +112,7 @@ public interface Solution {
                         pos = result.get(j).rides().get(result.get(j).rides().size() - 1).end();
                     }
                     int currWast = Math.max(toAssign.startT() - posTime, pos.distance(toAssign.start()));
-                    if (currWast < wastTime && canFinishAndHasBonus(toAssign, pos, posTime)) {
+                    if (currWast < wastTime && canFinish(toAssign, pos, posTime)) {
                         wastTime = currWast;
                         vehicle = j;
                     }
@@ -55,7 +125,7 @@ public interface Solution {
                 candidate.remove(0);
             }else {
                 result.get(vehicle).rides().add(toAssign);
-                int posTime = posTimes.get(vehicle) + wastTime;
+                int posTime = posTimes.get(vehicle) + wastTime + toAssign.start().distance(toAssign.end());
                 posTimes.set(vehicle, posTime);
                 candidate.remove(0);
             }
@@ -241,6 +311,75 @@ public interface Solution {
             score += score(assign, steps, bonus);
         }
         return score;
+    }
+
+    default List<Integer> noScoreRide(Assign assign, int steps) {
+        // simulate by time
+        List<Integer> noScoreRide = new ArrayList<>();
+        List<Ride> rides = assign.rides();
+        int t = 0;
+        int r = 0;
+        Pair pos = new Pair(0, 0);
+        boolean start = false;
+        while (r < rides.size()) {
+            Ride ride = rides.get(r);
+            if (t > steps) {
+                return noScoreRide;
+            }
+            if (!start) {
+                int distance = ride.start().distance(pos);
+                t += distance;
+                if (t <= ride.startT()) {
+                    t = ride.startT();
+                }
+                start = true;
+
+            } else {
+                int distance = ride.start().distance(ride.end());
+                if (t + distance > ride.endT()) {
+                    noScoreRide.add(ride.id());
+                }
+                t += distance;
+                pos = ride.end();
+                r++;
+                start = false;
+            }
+
+        }
+        return noScoreRide;
+    }
+
+    default int finishTime(Assign assign, int steps) {
+        // simulate by time
+
+        List<Ride> rides = assign.rides();
+        int t = 0;
+        int r = 0;
+        Pair pos = new Pair(0, 0);
+        boolean start = false;
+        while (r < rides.size()) {
+            Ride ride = rides.get(r);
+            if (t > steps) {
+                return steps;
+            }
+            if (!start) {
+                int distance = ride.start().distance(pos);
+                t += distance;
+                if (t <= ride.startT()) {
+                    t = ride.startT();
+                }
+                start = true;
+
+            } else {
+                int distance = ride.start().distance(ride.end());
+                t += distance;
+                pos = ride.end();
+                r++;
+                start = false;
+            }
+
+        }
+        return t;
     }
 
     default int score(Assign assign, int steps, int bonus) {
