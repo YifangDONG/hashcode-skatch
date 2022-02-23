@@ -61,12 +61,15 @@ public class Main {
         for (Integer i : ProgressBar.wrap(Iteration.range(0, LOOP), "generate solution")) {
             // do something to evaluate the solution
         }
-        long score = 1;
-        int count = lastResult.count() + 1;
+
+        long score = solution.score();
+
         // adapt score to output
+        var outputAdapter = new OutputAdapter();
+        List<List<String>> outputContent = outputAdapter.adapt();
 
         // write output
-        List<List<String>> outputContent = OutputAdapter.adapt();
+        int count = lastResult.count() + 1;
         OUTPUT.write(String.format("%s\\%d", aCase.name(), count), outputContent);
         Summary.addResult(aCase, count, score);
     }

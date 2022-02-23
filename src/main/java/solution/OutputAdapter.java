@@ -3,10 +3,12 @@ package solution;
 import java.util.Collections;
 import java.util.List;
 
-
 public class OutputAdapter {
+    // inject the result to adapt
+    public OutputAdapter() {
+    }
 
-    public static List<List<String>> adapt() {
+    public List<List<String>> adapt() {
         return Collections.emptyList();
     }
 }
