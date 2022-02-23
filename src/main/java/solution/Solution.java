@@ -74,7 +74,7 @@ public interface Solution {
 
     default double score(Map<Integer, Set<Integer>> videoToCache, Map<Integer, Video> videos,
         Map<Integer, Endpoint> endpoints,
-        List<Request> requests) {
+        List<Request> requests, Integer centerId) {
 
         long score = 0;
         long totalRequests = 0;
@@ -86,7 +86,7 @@ public interface Solution {
             if (cacheIds != null && !cacheIds.isEmpty()) {
                 int endpointId = request.endpointId();
                 Endpoint endpoint = endpoints.get(endpointId);
-                Integer centerL = endpoint.latency().get(-1);
+                Integer centerL = endpoint.latency().get(centerId);
                 int minLatency = centerL;
                 for (Integer cacheId : cacheIds) {
                     Integer latency = endpoint.latency().get(cacheId);

@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import summary.Result;
 
 // This class is used to adapt the raw content to the adapted data model
@@ -48,23 +51,44 @@ public class InputAdapter {
         return videos;
     }
 
+    public int[] videoSizes() {
+        return content.get(1).stream()
+            .map(Integer::parseInt)
+            .mapToInt(Integer::intValue)
+            .toArray();
+    }
+
     public List<Endpoint> endpoints() {
         int n = nEndpoints();
         List<Endpoint> endpoints = new ArrayList<>();
         int i = 2;
         while (endpoints.size() < n) {
-            int center = Integer.parseInt(content.get(i).get(0));
-            int nCache = Integer.parseInt(content.get(i).get(1));
+            int centerLatency = Integer.parseInt(content.get(i).get(0));
+            int nCacheConnected = Integer.parseInt(content.get(i).get(1));
             Map<Integer, Integer> latency = new HashMap<>();
-            latency.put(-1, center);
+            latency.put(nCache(), centerLatency);
             i++;
-            for (int j = 0; j < nCache; j++) {
+            for (int j = 0; j < nCacheConnected; j++) {
                 latency.put(Integer.parseInt(content.get(i).get(0)), Integer.parseInt(content.get(i).get(1)));
                 i++;
             }
             endpoints.add(new Endpoint(endpoints.size(), latency));
         }
         return endpoints;
+    }
+
+    public Table<Integer, Integer, Integer> endpointToCacheLatency() {
+        Table<Integer, Integer, Integer> table = HashBasedTable.create();
+        var endpoints = endpoints();
+        for (Endpoint endpoint : endpoints) {
+            endpoint.latency()
+                .forEach((cache, latency) -> table.put(endpoint.id(), cache, latency));
+        }
+        return table;
+    }
+
+    public int totalCounts() {
+        return requests().stream().map(Request::count).mapToInt(Integer::intValue).sum();
     }
 
     public List<Request> requests() {
@@ -88,5 +112,19 @@ public class InputAdapter {
             servers.add(new Server(id, videos));
         }
         return servers;
+    }
+
+    public Map<Integer, Endpoint> endpointMap() {
+        return endpoints().stream().collect(Collectors.toMap(
+            Endpoint::id,
+            Function.identity()
+        ));
+    }
+
+    public Map<Integer, Integer> videoToSize() {
+        return videos().stream().collect(Collectors.toMap(
+            Video::id,
+            Video::size
+        ));
     }
 }

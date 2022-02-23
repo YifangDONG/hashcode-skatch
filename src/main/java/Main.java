@@ -1,17 +1,14 @@
-import collection.Iteration;
-import collection.ListUtils;
 import io.Input;
 import io.Output;
 import logging.LogObjectFactory;
-import me.tongfei.progressbar.ProgressBar;
 import solution.Endpoint;
 import solution.InputAdapter;
 import solution.OutputAdapter;
-import solution.Request;
 import solution.Server;
 import solution.Solution;
 import solution.SolutionImpl;
 import solution.Video;
+import solution.VideoCPSolver;
 import summary.Case;
 import summary.Summary;
 
@@ -32,8 +29,9 @@ public class Main {
     public static void main(String[] args) {
 
 //        testExampleA();
-                execute();
-                getResultSummary();
+//        execute();
+        withCpSolver(Case.b);
+        getResultSummary();
     }
 
     private static void testExampleA() {
@@ -42,15 +40,11 @@ public class Main {
         InputAdapter resultAdapter = new InputAdapter(READ_OUTPUT.read("a\\0"));
         Solution solution = new SolutionImpl();
 
-        Map<Integer, Endpoint> endpointMap = inputAdapter.endpoints().stream().collect(Collectors.toMap(
-            Endpoint::id,
-            Function.identity()
-        ));
-
         List<Server> servers = resultAdapter.servers();
 
         Map<Integer, Set<Integer>> videoToCache = solution.videoToCache(servers);
-        double score = solution.score(videoToCache, null, endpointMap, inputAdapter.requests());
+        var centerId = inputAdapter.nCache();
+        double score = solution.score(videoToCache, null, inputAdapter.endpointMap(), inputAdapter.requests(), centerId);
         System.out.println(score);
 
         // calculate the score to test the score function is correct
@@ -68,6 +62,33 @@ public class Main {
         }
     }
 
+    private static void withCpSolver(Case aCase) {
+
+        var lastResult = Summary.getLastResult(aCase);
+
+        // read input
+        List<List<String>> content = INPUT.read(aCase.name());
+
+        // adapt input to model
+        InputAdapter inputAdapter = new InputAdapter(content);
+
+        // calculate score
+        var solver = new VideoCPSolver();
+        var result = solver.solve(inputAdapter);
+        Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
+
+        Map<Integer, Set<Integer>> videoToCache = solution.videoToCache(result);
+        double score = solution.score(videoToCache, null, inputAdapter.endpointMap(), inputAdapter.requests(), inputAdapter.nCache());
+        System.out.printf("%s\\%d%n", aCase.name(), (long) score);
+        int count = lastResult.count() + 1;
+        // adapt score to output
+
+        // write output
+        List<List<String>> outputContent = OutputAdapter.adapt(result);
+        OUTPUT.write(String.format("%s\\%d", aCase.name(), count), outputContent);
+        Summary.addResult(aCase, count, (long) score);
+    }
+
     private static void executeCase(Case aCase) {
 
         var lastResult = Summary.getLastResult(aCase);
@@ -81,19 +102,13 @@ public class Main {
         // calculate score
         Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
         var requests = inputAdapter.requests();
-        Map<Integer, Endpoint> endpointMap = inputAdapter.endpoints().stream().collect(Collectors.toMap(
-            Endpoint::id,
-            Function.identity()
-        ));
-        var videoToSize = inputAdapter.videos().stream().collect(Collectors.toMap(
-            Video::id,
-            Video::size
-        ));
+        var endpointMap = inputAdapter.endpointMap();
+        var videoToSize = inputAdapter.videoToSize();
         var result = solution.greedy(requests, inputAdapter.cacheSize(), inputAdapter.nCache(), videoToSize, endpointMap);
 
         Map<Integer, Set<Integer>> videoToCache = solution.videoToCache(result);
-        double score = solution.score(videoToCache, null, endpointMap, inputAdapter.requests());
-        System.out.printf("%s\\%d%n",  aCase.name(), (long)score);
+        double score = solution.score(videoToCache, null, endpointMap, inputAdapter.requests(), inputAdapter.nCache());
+        System.out.printf("%s\\%d%n", aCase.name(), (long) score);
         int count = lastResult.count() + 1;
         // adapt score to output
 
