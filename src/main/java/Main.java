@@ -1,22 +1,18 @@
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import io.Input;
 import io.Output;
 import logging.LogObjectFactory;
-import solution.Endpoint;
 import solution.InputAdapter;
 import solution.OutputAdapter;
 import solution.Server;
 import solution.Solution;
 import solution.SolutionImpl;
-import solution.Video;
 import solution.VideoCPSolver;
 import summary.Case;
 import summary.Summary;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class Main {
 
@@ -30,7 +26,7 @@ public class Main {
 
 //        testExampleA();
 //        execute();
-        withCpSolver(Case.b);
+        withCpSolver(Case.c);
         getResultSummary();
     }
 

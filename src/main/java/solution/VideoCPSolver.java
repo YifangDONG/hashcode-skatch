@@ -111,7 +111,7 @@ public class VideoCPSolver {
         var scores = new int[nRequest * nServer];
         for (int i = 0; i < nRequest; i++) {
             for (int j = 0; j < nServer; j++) {
-                var p = i * nRequest + j;
+                var p = i * nServer + j;
                 intVars[p] = reqCacheVariables.get(i, j);
                 scores[p] = reqCacheScore.get(i, j);
             }
