@@ -18,6 +18,8 @@ public class SolutionImpl implements Solution {
     @Override
     public long score(List<Assign> assigns) {
 
+        int score = 0;
+
         var nameToPeople = inputAdapter.nameToPeople();
         var peopleNames = nameToPeople.keySet();
         var nameToProject = inputAdapter.projects();
@@ -39,14 +41,50 @@ public class SolutionImpl implements Solution {
         }
 
         for (Assign assign : assigns) {
-            var people = assign.people().stream().map(name -> nameToPeople.get(name)).collect(Collectors.toList());
+
+            var assignedPeople = assign.people().stream().map(name -> nameToPeople.get(name)).collect(Collectors.toList());
             var project = nameToProject.get(assign.projectName());
             var skillsNeeds = project.skills();
-            skillCheck(people, skillsNeeds);
-            
+            skillCheck(assignedPeople, skillsNeeds);
+
+            var startDay = getStartDay(assignedPeople, personFree);
+            var days = project.days();
+            var endDays = startDay + days;
+
+            // when project finish update the person available days
+            for (Person p : assignedPeople) {
+                personFree.put(p.name(), endDays);
+            }
+
+            // update skill
+            updateSkill(assignedPeople, nameToPeople, skillsNeeds);
+
+            // add score
+            score += project.reward() - Math.max(0, endDays - project.before());
+
         }
 
-        return 0;
+        return score;
+    }
+
+    private void updateSkill(List<Person> assignedPeople, Map<String, Person> nameToPeople, List<Skill> skillsNeeds) {
+        var size = assignedPeople.size();
+        for (int i = 0; i < size; i++) {
+            var skill = skillsNeeds.get(i);
+            var person = assignedPeople.get(i);
+            var currentLevel = person.skills().get(skill.type()).level();
+            if (currentLevel == skill.level() || currentLevel == skill.level() - 1) {
+                nameToPeople.put(person.name(), person.addSkillLevel(skill));
+            }
+        }
+    }
+
+    private int getStartDay(List<Person> people, Map<String, Integer> personFree) {
+        return people.stream()
+            .map(Person::name)
+            .map(name -> personFree.get(name))
+            .mapToInt(Integer::intValue)
+            .max().getAsInt();
     }
 
     private void skillCheck(List<Person> people, List<Skill> skillsNeeds) {

@@ -27,9 +27,9 @@ public class Main {
 
     public static void main(String[] args) {
 
-//        testExampleA();
-        execute();
-        getResultSummary();
+        testExampleA();
+//        execute();
+//        getResultSummary();
     }
 
     private static void testExampleA() {
@@ -40,7 +40,10 @@ public class Main {
         var people = inputAdapter.getPeople();
         var projects = inputAdapter.getProjects();
         var assigns = resultAdapter.getAssigns();
-        System.out.printf("");
+
+        var solution = new SolutionImpl(inputAdapter);
+        var score = solution.score(assigns);
+        System.err.println(score);
     }
 
     private static void getResultSummary() {
