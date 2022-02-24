@@ -56,12 +56,12 @@ public class SolutionImpl implements Solution {
 
             for (int i = 1; i < skills.size(); i++) {
                 var skill = skills.get(i);
-                for(String p : peopleNames) {
+                for (String p : peopleNames) {
                     var l = skillPL.get(type, p);
-                    if(l == null) {
+                    if (l == null) {
                         l = 0;
                     }
-                    if((l >= skill.level() || l == skill.level() - 1) && !chosedPerson.contains(p))  {
+                    if ((l >= skill.level() || l == skill.level() - 1) && !chosedPerson.contains(p)) {
                         chosedPerson.add(p);
                         roles.add(p);
                         break;
@@ -69,12 +69,32 @@ public class SolutionImpl implements Solution {
                 }
             }
 
-
-            if(roles.size() == skills.size()) {
+            if (roles.size() == skills.size()) {
                 assigns.add(new Assign(project.name(), roles));
+                // update skills
+                updateSkill(skillPL, nameToPeople, skills, roles);
             }
         }
         return assigns;
+    }
+
+    //skill list should has only one type of skill, can have different level
+    private void updateSkill(Table<String, String, Integer> skillPersonLevel, Map<String, Person> nameToPeople,
+        List<Skill> skillsNeeds, List<String> roles) {
+        var size = roles.size();
+        for (int i = 0; i < size; i++) {
+            var role = roles.get(i);
+            var skill = skillsNeeds.get(i);
+            var type = skill.type();
+            var level = skillPersonLevel.get(type, role);
+            if(level == null) {
+                level = 0;
+            }
+            if(level == skill.level() || level + 1 == skill.level()) {
+                skillPersonLevel.put(type, role, level + 1);
+            }
+        }
+
     }
 
     public List<Assign> greedyE() {
@@ -95,11 +115,10 @@ public class SolutionImpl implements Solution {
             Set<String> chosedPerson = new HashSet<>();
             List<String> roles = new ArrayList<>();
 
-
             var skills = project.skills();
-            for(Skill skill : skills) {
+            for (Skill skill : skills) {
                 var possiblePerson = skillToPersons.get(skill.type());
-                if(chosedPerson.containsAll(possiblePerson)) {
+                if (chosedPerson.containsAll(possiblePerson)) {
                     canAdd = false;
                     break;
                 }
@@ -110,7 +129,7 @@ public class SolutionImpl implements Solution {
                 chosedPerson.add(chosed);
                 roles.add(chosed);
             }
-            if(canAdd) {
+            if (canAdd) {
                 assigns.add(new Assign(project.name(), roles));
             }
         }
@@ -130,7 +149,6 @@ public class SolutionImpl implements Solution {
             personFree.put(name, 0);
         }
 
-
         Map<String, List<String>> personToProjects = new HashMap<>();
         for (Assign assign : assigns) {
             var people = assign.people();
@@ -140,7 +158,6 @@ public class SolutionImpl implements Solution {
                 personToProjects.put(person, projects);
             }
         }
-
 
         for (Assign assign : assigns) {
 
@@ -209,7 +226,8 @@ public class SolutionImpl implements Solution {
 
             if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() >= skill.level()) {
 
-            } else if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() + 1 == skill.level()) {
+            } else if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() + 1 ==
+                       skill.level()) {
                 // mentor
                 if (highestLevel.get(skill.type()).level() >= skill.level()) {
 
