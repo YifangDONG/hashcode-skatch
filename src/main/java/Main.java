@@ -3,13 +3,17 @@ import io.Input;
 import io.Output;
 import logging.LogObjectFactory;
 import me.tongfei.progressbar.ProgressBar;
+import solution.Assign;
 import solution.InputAdapter;
 import solution.OutputAdapter;
+import solution.Person;
+import solution.Project;
 import solution.Solution;
 import solution.SolutionImpl;
 import summary.Case;
 import summary.Summary;
 
+import java.util.Collections;
 import java.util.List;
 
 public class Main {
@@ -32,6 +36,10 @@ public class Main {
         InputAdapter inputAdapter = new InputAdapter(INPUT.read(Case.a.name()));
         InputAdapter resultAdapter = new InputAdapter(READ_OUTPUT.read("a\\0"));
         // calculate the score to test the score function is correct
+        var people = inputAdapter.getPeople();
+        var projects = inputAdapter.getProjects();
+        var assigns = resultAdapter.getAssigns();
+        System.out.printf("");
     }
 
     private static void getResultSummary() {
@@ -65,7 +73,8 @@ public class Main {
         long score = solution.score();
 
         // adapt score to output
-        var outputAdapter = new OutputAdapter();
+        List<Assign> result = Collections.emptyList();
+        var outputAdapter = new OutputAdapter(result);
         List<List<String>> outputContent = outputAdapter.adapt();
 
         // write output
