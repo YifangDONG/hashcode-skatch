@@ -9,6 +9,7 @@ import solution.OutputAdapter;
 import solution.Person;
 import solution.Project;
 import solution.Solution;
+import solution.SolutionGreedy;
 import solution.SolutionImpl;
 import summary.Case;
 import summary.Summary;
@@ -26,9 +27,9 @@ public class Main {
 
     public static void main(String[] args) {
 
-        testExampleA();
-//        execute();
-//        getResultSummary();
+//        testExampleA();
+        execute();
+        getResultSummary();
     }
 
     private static void testExampleA() {
@@ -65,13 +66,11 @@ public class Main {
         InputAdapter inputAdapter = new InputAdapter(content);
 
         // calculate score
-        Solution solution = LogObjectFactory.create(new SolutionImpl(inputAdapter), Solution.class);
-        for (Integer i : ProgressBar.wrap(Iteration.range(0, LOOP), "generate solution")) {
-            // do something to evaluate the solution
-        }
+        var solutionGreedy = new SolutionGreedy(inputAdapter);
 
-        List<Assign> result = Collections.emptyList();
-        long score = solution.score(result);
+
+        List<Assign> result = solutionGreedy.calculate();
+        long score = 0;
 
         // adapt score to output
         var outputAdapter = new OutputAdapter(result);
