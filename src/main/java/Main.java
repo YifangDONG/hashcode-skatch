@@ -27,9 +27,10 @@ public class Main {
 
     public static void main(String[] args) {
 
-        testExampleA();
+//        testExampleA();
 //        execute();
-//        getResultSummary();
+        executeCase(Case.b);
+        getResultSummary();
     }
 
     private static void testExampleA() {
@@ -70,10 +71,10 @@ public class Main {
 
         // calculate score
         var solutionGreedy = new SolutionGreedy(inputAdapter);
-
+        var solution = new SolutionImpl(inputAdapter);
 
         List<Assign> result = solutionGreedy.calculate();
-        long score = 0;
+        long score = solution.score(result);
 
         // adapt score to output
         var outputAdapter = new OutputAdapter(result);

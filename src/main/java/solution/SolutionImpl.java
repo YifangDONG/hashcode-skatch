@@ -15,6 +15,10 @@ public class SolutionImpl implements Solution {
         this.inputAdapter = inputAdapter;
     }
 
+//    public List<Assign> greedyC() {
+//        inputAdapter.getProjects()
+//    }
+
     @Override
     public long score(List<Assign> assigns) {
 

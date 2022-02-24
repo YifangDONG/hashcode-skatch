@@ -1,10 +1,12 @@
 package solution;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.Set;
 
 public class SolutionGreedy {
 
@@ -24,13 +26,15 @@ public class SolutionGreedy {
             boolean projectDoable = true;
             List<String> personList = new ArrayList<>();
             Assign assign = new Assign(project.name(), personList);
+            Set<Person> used = new HashSet<>();
             for (Skill skill : project.skills()) {
                 boolean found = false;
                 for (Person person: all) {
                     Skill personSkill = person.skills().get(skill.type());
-                    if (personSkill != null && personSkill.level() >= skill.level()) {
+                    if (!used.contains(person) && personSkill != null && personSkill.level() >= skill.level()) {
                         personList.add(person.name());
                         deque.addLast(person);
+                        used.add(person);
                         found = true;
                     }
                 }
@@ -39,9 +43,10 @@ public class SolutionGreedy {
                     deque.clear();
                     for (Person person: all) {
                         Skill personSkill = person.skills().get(skill.type());
-                        if (personSkill != null && personSkill.level() >= skill.level()) {
+                        if (!used.contains(person) && personSkill != null && personSkill.level() >= skill.level()) {
                             personList.add(person.name());
                             deque.addLast(person);
+                            used.add(person);
                             found = true;
                         }
                     }
@@ -57,4 +62,5 @@ public class SolutionGreedy {
         }
         return assigns;
     }
+
 }
