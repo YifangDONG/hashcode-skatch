@@ -56,7 +56,7 @@ public class SolutionGreedy {
                     break;
                 }
             }
-            if (projectDoable) {
+            if (projectDoable && assign.people().size() == project.skills().size()) {
                 assigns.add(assign);
             }
         }
