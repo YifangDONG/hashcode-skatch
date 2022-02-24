@@ -1,11 +1,17 @@
 package solution;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
+import org.checkerframework.common.value.qual.EnsuresMinLenIf;
 
 // This class is used to adapt the raw content to the adapted data model
 public class InputAdapter {
@@ -34,6 +40,45 @@ public class InputAdapter {
             .collect(Collectors.toMap(Project::name, Function.identity()));
     }
 
+    public Table<String, String, Integer> skillPersonLevel() {
+        Table<String, String, Integer> table = HashBasedTable.create();
+        var people = getPeople();
+        for(Person p : people) {
+            p.skills().forEach(
+                (type, skill) -> table.put(type, p.name(), skill.level())
+            );
+        }
+        return table;
+    }
+
+    public Map<String, String> skillMaster() {
+        var skillMaster = new HashMap<String, String>();
+        var nameToPeople = nameToPeople();
+        var skillToPersons = skillToPersons();
+        for(Map.Entry<String,List<String>> skillPersons : skillToPersons.entrySet()) {
+            var persons = skillPersons.getValue();
+            var type = skillPersons.getKey();
+            var master = persons.stream().map(nameToPeople::get).sorted(
+                Comparator.<Person>comparingInt(person -> person.skills().get(type).level()).reversed()
+            ).collect(Collectors.toList()).get(0).name();
+            skillMaster.put(type, master);
+        }
+        return skillMaster;
+    }
+
+    public Map<String, List<String>> skillToPersons() {
+        var skillToPerson = new HashMap<String, List<String>>();
+        var people = getPeople();
+        for (Person p : people) {
+            var skills = p.skills().keySet();
+            for (String skill : skills) {
+                var updated = skillToPerson.getOrDefault(skill, new ArrayList<>());
+                updated.add(p.name());
+                skillToPerson.put(skill, updated);
+            }
+        }
+        return skillToPerson;
+    }
 
     public List<Person> getPeople() {
         var people = new ArrayList<Person>();

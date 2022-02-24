@@ -1,21 +1,17 @@
-import collection.Iteration;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import io.Input;
 import io.Output;
-import logging.LogObjectFactory;
-import me.tongfei.progressbar.ProgressBar;
-import solution.Assign;
 import solution.InputAdapter;
 import solution.OutputAdapter;
-import solution.Person;
 import solution.Project;
-import solution.Solution;
+import solution.Skill;
 import solution.SolutionGreedy;
 import solution.SolutionImpl;
 import summary.Case;
 import summary.Summary;
-
-import java.util.Collections;
-import java.util.List;
 
 public class Main {
 
@@ -29,8 +25,20 @@ public class Main {
 
 //        testExampleA();
 //        execute();
-        executeCase(Case.b);
+        executeCase(Case.f);
+        analyse(Case.f);
         getResultSummary();
+    }
+
+    private static void analyse(Case f) {
+        InputAdapter inputAdapter = new InputAdapter(INPUT.read(f.name()));
+        var uniqueSkills = inputAdapter.getProjects()
+            .stream()
+            .collect(Collectors.toMap(
+                Project::name,
+                project -> project.skills().stream().map(Skill::type).collect(Collectors.toSet()).size()
+            ));
+        System.out.println(uniqueSkills);
     }
 
     private static void testExampleA() {
@@ -73,7 +81,8 @@ public class Main {
         var solutionGreedy = new SolutionGreedy(inputAdapter);
         var solution = new SolutionImpl(inputAdapter);
 
-        List<Assign> result = solutionGreedy.calculate();
+//        List<Assign> result = solutionGreedy.calculate();
+        var result = solution.greedyF();
         long score = solution.score(result);
 
         // adapt score to output

@@ -1,11 +1,17 @@
 package solution;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.Table;
 
 public class SolutionImpl implements Solution {
 
@@ -15,9 +21,101 @@ public class SolutionImpl implements Solution {
         this.inputAdapter = inputAdapter;
     }
 
-//    public List<Assign> greedyC() {
-//        inputAdapter.getProjects()
-//    }
+    public List<Assign> greedyF() {
+
+        var skillMaster = inputAdapter.skillMaster();
+        var skillPL = inputAdapter.skillPersonLevel();
+        var skillToPersons = inputAdapter.skillToPersons();
+        var nameToPeople = inputAdapter.nameToPeople();
+        var peopleNames = nameToPeople.keySet();
+        var nameToProject = inputAdapter.projects();
+
+        Map<String, Integer> personFree = new HashMap<>();
+        for (String name : peopleNames) {
+            personFree.put(name, 0);
+        }
+
+        var minLevels = inputAdapter.getProjects()
+            .stream()
+            .filter(project -> project.skills().stream().map(Skill::type).collect(Collectors.toSet()).size() == 1)
+            .sorted(Comparator.<Project>comparingInt(p -> p.skills().get(0).level()))
+            .collect(Collectors.toList());
+
+        var assigns = new ArrayList<Assign>();
+
+        for (Project project : minLevels) {
+
+            Set<String> chosedPerson = new HashSet<>();
+            List<String> roles = new ArrayList<>();
+
+            var skills = project.skills();
+            var type = skills.get(0).type();
+            var master = skillMaster.get(type);
+            roles.add(master);
+            chosedPerson.add(master);
+
+            for (int i = 1; i < skills.size(); i++) {
+                var skill = skills.get(i);
+                for(String p : peopleNames) {
+                    var l = skillPL.get(type, p);
+                    if(l == null) {
+                        l = 0;
+                    }
+                    if((l >= skill.level() || l == skill.level() - 1) && !chosedPerson.contains(p))  {
+                        chosedPerson.add(p);
+                        roles.add(p);
+                        break;
+                    }
+                }
+            }
+
+
+            if(roles.size() == skills.size()) {
+                assigns.add(new Assign(project.name(), roles));
+            }
+        }
+        return assigns;
+    }
+
+    public List<Assign> greedyE() {
+        var random = new Random();
+        var skillToPersons = inputAdapter.skillToPersons();
+
+        var sortByValue = inputAdapter.getProjects()
+            .stream()
+            .filter(p -> p.reward() < 600)
+            .sorted(Comparator.<Project>comparingInt(p -> p.reward()).reversed())
+            .collect(Collectors.toList());
+
+        var assigns = new ArrayList<Assign>();
+
+        for (Project project : sortByValue) {
+
+            boolean canAdd = true;
+            Set<String> chosedPerson = new HashSet<>();
+            List<String> roles = new ArrayList<>();
+
+
+            var skills = project.skills();
+            for(Skill skill : skills) {
+                var possiblePerson = skillToPersons.get(skill.type());
+                if(chosedPerson.containsAll(possiblePerson)) {
+                    canAdd = false;
+                    break;
+                }
+                var chosed = possiblePerson.get(random.nextInt(possiblePerson.size()));
+                while (chosedPerson.contains(chosed)) {
+                    chosed = possiblePerson.get(random.nextInt(possiblePerson.size()));
+                }
+                chosedPerson.add(chosed);
+                roles.add(chosed);
+            }
+            if(canAdd) {
+                assigns.add(new Assign(project.name(), roles));
+            }
+        }
+        return assigns;
+    }
 
     @Override
     public long score(List<Assign> assigns) {
@@ -27,9 +125,13 @@ public class SolutionImpl implements Solution {
         var nameToPeople = inputAdapter.nameToPeople();
         var peopleNames = nameToPeople.keySet();
         var nameToProject = inputAdapter.projects();
+        Map<String, Integer> personFree = new HashMap<>();
+        for (String name : peopleNames) {
+            personFree.put(name, 0);
+        }
+
 
         Map<String, List<String>> personToProjects = new HashMap<>();
-
         for (Assign assign : assigns) {
             var people = assign.people();
             for (String person : people) {
@@ -39,10 +141,6 @@ public class SolutionImpl implements Solution {
             }
         }
 
-        Map<String, Integer> personFree = new HashMap<>();
-        for (String name : peopleNames) {
-            personFree.put(name, 0);
-        }
 
         for (Assign assign : assigns) {
 
@@ -64,7 +162,7 @@ public class SolutionImpl implements Solution {
             updateSkill(assignedPeople, nameToPeople, skillsNeeds);
 
             // add score
-            score += project.reward() - Math.max(0, endDays - project.before());
+            score += Math.max(0, project.reward() - Math.max(0, endDays - project.before()));
 
         }
 
@@ -76,7 +174,7 @@ public class SolutionImpl implements Solution {
         for (int i = 0; i < size; i++) {
             var skill = skillsNeeds.get(i);
             var person = assignedPeople.get(i);
-            var currentLevel = person.skills().get(skill.type()).level();
+            var currentLevel = person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level();
             if (currentLevel == skill.level() || currentLevel == skill.level() - 1) {
                 nameToPeople.put(person.name(), person.addSkillLevel(skill));
             }
@@ -109,9 +207,9 @@ public class SolutionImpl implements Solution {
             var skill = skillsNeeds.get(i);
             var person = people.get(i);
 
-            if (person.skills().get(skill.type()).level() >= skill.level()) {
+            if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() >= skill.level()) {
 
-            } else if (person.skills().get(skill.type()).level() + 1 == skill.level()) {
+            } else if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() + 1 == skill.level()) {
                 // mentor
                 if (highestLevel.get(skill.type()).level() >= skill.level()) {
 
