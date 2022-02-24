@@ -3,6 +3,9 @@ package solution;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 // This class is used to adapt the raw content to the adapted data model
 public class InputAdapter {
@@ -20,6 +23,17 @@ public class InputAdapter {
     public int nProjects() {
         return Integer.parseInt(content.get(0).get(1));
     }
+
+    public Map<String, Person> nameToPeople() {
+        return getPeople().stream()
+            .collect(Collectors.toMap(Person::name, Function.identity()));
+    }
+
+    public Map<String, Project> projects() {
+        return getProjects().stream()
+            .collect(Collectors.toMap(Project::name, Function.identity()));
+    }
+
 
     public List<Person> getPeople() {
         var people = new ArrayList<Person>();

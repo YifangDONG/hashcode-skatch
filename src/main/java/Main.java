@@ -65,15 +65,15 @@ public class Main {
         InputAdapter inputAdapter = new InputAdapter(content);
 
         // calculate score
-        Solution solution = LogObjectFactory.create(new SolutionImpl(), Solution.class);
+        Solution solution = LogObjectFactory.create(new SolutionImpl(inputAdapter), Solution.class);
         for (Integer i : ProgressBar.wrap(Iteration.range(0, LOOP), "generate solution")) {
             // do something to evaluate the solution
         }
 
-        long score = solution.score();
+        List<Assign> result = Collections.emptyList();
+        long score = solution.score(result);
 
         // adapt score to output
-        List<Assign> result = Collections.emptyList();
         var outputAdapter = new OutputAdapter(result);
         List<List<String>> outputContent = outputAdapter.adapt();
 
