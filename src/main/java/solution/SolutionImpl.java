@@ -1,19 +1,19 @@
 package solution;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Table;
 
-public class SolutionImpl implements Solution {
+public class SolutionImpl {
 
     private final InputAdapter inputAdapter;
 
@@ -21,162 +21,159 @@ public class SolutionImpl implements Solution {
         this.inputAdapter = inputAdapter;
     }
 
-    public List<Assign> greedyF() {
+    public List<Assign> simulation(Comparator<Project> comparator) {
 
-        var skillMaster = inputAdapter.skillMaster();
-        var skillPL = inputAdapter.skillPersonLevel();
-        var skillToPersons = inputAdapter.skillToPersons();
-        var nameToPeople = inputAdapter.nameToPeople();
-        var peopleNames = nameToPeople.keySet();
-        var nameToProject = inputAdapter.projects();
+        var noScore = 0;
+        var skillPersonLevel = inputAdapter.skillPersonLevel();
+        var peopleNames = new HashSet<>(inputAdapter.nameToPeople().keySet());
+        Map<String, Integer> personFree = initPeronFreeDay(peopleNames);
 
-        Map<String, Integer> personFree = new HashMap<>();
-        for (String name : peopleNames) {
-            personFree.put(name, 0);
-        }
-
-        var minLevels = inputAdapter.getProjects()
+        var projects = inputAdapter.getProjects()
             .stream()
-            .filter(project -> project.skills().stream().map(Skill::type).collect(Collectors.toSet()).size() == 1)
-            .sorted(Comparator.<Project>comparingInt(p -> p.skills().get(0).level()))
-            .collect(Collectors.toList());
+            .sorted(comparator)
+            .collect(Collectors.toCollection(ArrayDeque::new));
 
-        var assigns = new ArrayList<Assign>();
+        var results = new ArrayList<Assign>();
 
-        for (Project project : minLevels) {
+        var currentSize = projects.size();
+        var i = 0;
+        while (!projects.isEmpty()) {
 
-            Set<String> chosedPerson = new HashSet<>();
-            List<String> roles = new ArrayList<>();
+            if (projects.size() == currentSize) {
+                i++;
+            } else {
+                currentSize = projects.size();
+                i = 0;
+            }
+            if (i > currentSize) {
+                break;
+            }
 
-            var skills = project.skills();
-            var type = skills.get(0).type();
-            var master = skillMaster.get(type);
-            roles.add(master);
-            chosedPerson.add(master);
+            var project = projects.pollFirst();
 
-            for (int i = 1; i < skills.size(); i++) {
-                var skill = skills.get(i);
-                for (String p : peopleNames) {
-                    var l = skillPL.get(type, p);
-                    if (l == null) {
-                        l = 0;
-                    }
-                    if ((l >= skill.level() || l == skill.level() - 1) && !chosedPerson.contains(p)) {
-                        chosedPerson.add(p);
-                        roles.add(p);
-                        break;
+            var canAssign = true;
+            var assignedPeople = new ArrayList<String>();
+            var assign = new Assign(project.name(), assignedPeople);
+
+            Map<String, Integer> needsMentor = new HashMap<String, Integer>(); // skill type to level
+            var canMentor = new HashMap<String, Integer>(); // skill type to level
+            var mentee = 0;
+
+            var needSkills = project.skills();
+            for (Skill skill : needSkills) {
+
+                var type = skill.type();
+                var candidates = new ArrayList<String>();
+                for (String person : peopleNames) {
+                    if (!assignedPeople.contains(person)) {
+                        var level = Optional.ofNullable(skillPersonLevel.get(type, person)).orElse(0);
+                        if (level >= skill.level() - 1) {
+                            candidates.add(person);
+                        }
                     }
                 }
-            }
-
-            if (roles.size() == skills.size()) {
-                assigns.add(new Assign(project.name(), roles));
-                // update skills
-                updateSkill(skillPL, nameToPeople, skills, roles);
-            }
-        }
-        return assigns;
-    }
-
-    //skill list should has only one type of skill, can have different level
-    private void updateSkill(Table<String, String, Integer> skillPersonLevel, Map<String, Person> nameToPeople,
-        List<Skill> skillsNeeds, List<String> roles) {
-        var size = roles.size();
-        for (int i = 0; i < size; i++) {
-            var role = roles.get(i);
-            var skill = skillsNeeds.get(i);
-            var type = skill.type();
-            var level = skillPersonLevel.get(type, role);
-            if(level == null) {
-                level = 0;
-            }
-            if(level == skill.level() || level + 1 == skill.level()) {
-                skillPersonLevel.put(type, role, level + 1);
-            }
-        }
-
-    }
-
-    public List<Assign> greedyE() {
-        var random = new Random();
-        var skillToPersons = inputAdapter.skillToPersons();
-
-        var sortByValue = inputAdapter.getProjects()
-            .stream()
-            .filter(p -> p.reward() < 600)
-            .sorted(Comparator.<Project>comparingInt(p -> p.reward()).reversed())
-            .collect(Collectors.toList());
-
-        var assigns = new ArrayList<Assign>();
-
-        for (Project project : sortByValue) {
-
-            boolean canAdd = true;
-            Set<String> chosedPerson = new HashSet<>();
-            List<String> roles = new ArrayList<>();
-
-            var skills = project.skills();
-            for (Skill skill : skills) {
-                var possiblePerson = skillToPersons.get(skill.type());
-                if (chosedPerson.containsAll(possiblePerson)) {
-                    canAdd = false;
+                if (candidates.isEmpty()) {
+                    canAssign = false;
                     break;
                 }
-                var chosed = possiblePerson.get(random.nextInt(possiblePerson.size()));
-                while (chosedPerson.contains(chosed)) {
-                    chosed = possiblePerson.get(random.nextInt(possiblePerson.size()));
+                String person;
+                if (needsMentor.isEmpty()) {
+                    person = findAvailablePerson(candidates, personFree);
+                } else {
+                    person = findMentor(candidates, needsMentor, skillPersonLevel, personFree);
                 }
-                chosedPerson.add(chosed);
-                roles.add(chosed);
+
+                assignedPeople.add(person);
+
+                var level = Optional.ofNullable(skillPersonLevel.get(type, person)).orElse(0);
+                skillPersonLevel.column(person)
+                    .forEach((sType, sLevel) -> {
+                        canMentor.put(sType, Math.max(canMentor.getOrDefault(sType, 0), sLevel));
+                    });
+                needsMentor = needsMentor.entrySet().stream()
+                    .filter(typeToLevel -> canMentor.getOrDefault(typeToLevel.getKey(), 0) < typeToLevel.getValue())
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                if (level == skill.level() - 1) {
+                    mentee++;
+                    if (canMentor.getOrDefault(type, 0) < skill.level()) {
+                        needsMentor.put(type, skill.level());
+                    }
+                }
             }
-            if (canAdd) {
-                assigns.add(new Assign(project.name(), roles));
+
+            if (canAssign && needsMentor.isEmpty()) {
+                var startDay = getStartDay(assignedPeople, personFree);
+                var days = project.days();
+                var endDays = startDay + days;
+                if (project.reward() - Math.max(0, endDays - project.before()) > 0) {
+                    results.add(assign);
+                    // update skill
+                    updateSkill(assignedPeople, needSkills, skillPersonLevel);
+                    // update person free
+                    updatePersonFree(personFree, assignedPeople, endDays);
+                }
+                if (project.reward() - Math.max(0, endDays - project.before()) <= 0) {
+                    noScore++;
+                }
+            } else {
+                projects.addLast(project);
             }
         }
-        return assigns;
+        System.err.println("no score " + noScore);
+        System.err.println("totoal assign " + results.size());
+        return results;
     }
 
-    @Override
-    public long score(List<Assign> assigns) {
-
-        int score = 0;
-
-        var nameToPeople = inputAdapter.nameToPeople();
-        var peopleNames = nameToPeople.keySet();
-        var nameToProject = inputAdapter.projects();
-        Map<String, Integer> personFree = new HashMap<>();
-        for (String name : peopleNames) {
-            personFree.put(name, 0);
-        }
-
-        Map<String, List<String>> personToProjects = new HashMap<>();
-        for (Assign assign : assigns) {
-            var people = assign.people();
-            for (String person : people) {
-                var projects = personToProjects.getOrDefault(person, new ArrayList<>());
-                projects.add(assign.projectName());
-                personToProjects.put(person, projects);
+    private String findMentor(List<String> candidates, Map<String, Integer> needsMentor, Table<String, String, Integer> skillPersonLevel, Map<String, Integer> personFree) {
+        var sortByAvailable = candidates.stream().sorted(Comparator.comparingInt(personFree::get)).collect(Collectors.toList());
+        var mentor = sortByAvailable.get(0);
+        var mentorMost = 0L;
+        for (String person : sortByAvailable) {
+            var nMentee = needsMentor.entrySet().stream()
+                .filter(
+                    entry -> Optional.ofNullable(skillPersonLevel.get(entry.getKey(), person)).orElse(0)
+                             >= entry.getValue()
+                ).count();
+            //            if (nMentee != 0) {
+            //                return mentor;
+            //            }
+            if (nMentee > mentorMost) {
+                mentorMost = nMentee;
+                mentor = person;
             }
         }
+        return mentor;
+    }
+
+    private String findAvailablePerson(List<String> candidates, Map<String, Integer> personFree) {
+        return candidates.stream().sorted(Comparator.comparingInt(personFree::get)).collect(Collectors.toList()).get(0);
+    }
+
+    public long score(List<Assign> assigns) {
+        int score = 0;
+
+        var skillPersonLevel = inputAdapter.skillPersonLevel();
+        var peopleNames = inputAdapter.nameToPeople().keySet();
+        var nameToProject = inputAdapter.projects();
+        Map<String, Integer> personFree = initPeronFreeDay(peopleNames);
 
         for (Assign assign : assigns) {
 
-            var assignedPeople = assign.people().stream().map(name -> nameToPeople.get(name)).collect(Collectors.toList());
+            var assignedPeople = assign.people();
+            checkPeopleUnique(assignedPeople);
             var project = nameToProject.get(assign.projectName());
-            var skillsNeeds = project.skills();
-            skillCheck(assignedPeople, skillsNeeds);
+            var needSkills = project.skills();
+            skillCheck(assignedPeople, needSkills, skillPersonLevel);
 
             var startDay = getStartDay(assignedPeople, personFree);
             var days = project.days();
             var endDays = startDay + days;
 
-            // when project finish update the person available days
-            for (Person p : assignedPeople) {
-                personFree.put(p.name(), endDays);
-            }
+            // update the person available days
+            updatePersonFree(personFree, assignedPeople, endDays);
 
-            // update skill
-            updateSkill(assignedPeople, nameToPeople, skillsNeeds);
+            // update skill level
+            updateSkill(assignedPeople, needSkills, skillPersonLevel);
 
             // add score
             score += Math.max(0, project.reward() - Math.max(0, endDays - project.before()));
@@ -186,50 +183,44 @@ public class SolutionImpl implements Solution {
         return score;
     }
 
-    private void updateSkill(List<Person> assignedPeople, Map<String, Person> nameToPeople, List<Skill> skillsNeeds) {
-        var size = assignedPeople.size();
-        for (int i = 0; i < size; i++) {
-            var skill = skillsNeeds.get(i);
-            var person = assignedPeople.get(i);
-            var currentLevel = person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level();
-            if (currentLevel == skill.level() || currentLevel == skill.level() - 1) {
-                nameToPeople.put(person.name(), person.addSkillLevel(skill));
-            }
+    private void updatePersonFree(Map<String, Integer> personFree, List<String> assignedPeople, int endDays) {
+        for (String person : assignedPeople) {
+            personFree.put(person, endDays);
         }
     }
 
-    private int getStartDay(List<Person> people, Map<String, Integer> personFree) {
-        return people.stream()
-            .map(Person::name)
-            .map(name -> personFree.get(name))
-            .mapToInt(Integer::intValue)
-            .max().getAsInt();
+    private void checkPeopleUnique(List<String> assignedPeople) {
+        if (assignedPeople.size() != new HashSet<>(assignedPeople).size()) {
+            throw new IllegalArgumentException("assign one person to more than one task");
+        }
     }
 
-    private void skillCheck(List<Person> people, List<Skill> skillsNeeds) {
-        if (people.size() != skillsNeeds.size()) {
+    private void skillCheck(List<String> assignedPeople, List<Skill> needSkills, Table<String, String, Integer> skillPersonLevel) {
+
+        var assigned = new HashSet<String>(assignedPeople);
+        if (assignedPeople.size() != needSkills.size()) {
             throw new IllegalArgumentException("people size not match");
         }
-        var highestLevel = people.stream()
-            .flatMap(p -> p.skills().values().stream())
-            .collect(Collectors.toSet())
-            .stream()
-            .collect(Collectors.toMap(
-                Skill::type,
-                Function.identity(),
-                (skill1, skill2) -> skill1.level() >= skill2.level() ? skill1 : skill2
-            ));
-        var size = people.size();
-        for (int i = 0; i < size; i++) {
-            var skill = skillsNeeds.get(i);
-            var person = people.get(i);
+        var mentorSkills = new HashSet<String>();
+        for (Skill skill : needSkills) {
+            var canMentor = skillPersonLevel.row(skill.type())
+                .entrySet().stream()
+                .anyMatch(personToLevel -> assigned.contains(personToLevel.getKey())
+                                           && personToLevel.getValue() >= skill.level());
+            if (canMentor) {
+                mentorSkills.add(skill.type());
+            }
+        }
 
-            if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() >= skill.level()) {
+        for (int i = 0; i < assignedPeople.size(); i++) {
+            var skill = needSkills.get(i);
+            var person = assignedPeople.get(i);
+            var currentLevel = Optional.ofNullable(skillPersonLevel.get(skill.type(), person)).orElse(0);
+            if (currentLevel >= skill.level()) {
 
-            } else if (person.skills().getOrDefault(skill.type(), new Skill(skill.type(), 0)).level() + 1 ==
-                       skill.level()) {
+            } else if (currentLevel + 1 == skill.level()) {
                 // mentor
-                if (highestLevel.get(skill.type()).level() >= skill.level()) {
+                if (mentorSkills.contains(skill.type())) {
 
                 } else {
                     throw new IllegalArgumentException("cannot mentor");
@@ -238,5 +229,33 @@ public class SolutionImpl implements Solution {
                 throw new IllegalArgumentException("skill not match");
             }
         }
+    }
+
+    private Map<String, Integer> initPeronFreeDay(Set<String> peopleNames) {
+        Map<String, Integer> personFree = new HashMap<>();
+        for (String name : peopleNames) {
+            personFree.put(name, 0);
+        }
+        return personFree;
+    }
+
+    private void updateSkill(List<String> assignedPeople, List<Skill> skillsNeeds, Table<String, String, Integer> skillPersonLevel) {
+        var size = assignedPeople.size();
+        for (int i = 0; i < size; i++) {
+            var skill = skillsNeeds.get(i);
+            var person = assignedPeople.get(i);
+            var level = Optional.ofNullable(skillPersonLevel.get(skill.type(), person)).orElse(0);
+            if (level == skill.level() || level == skill.level() - 1) {
+                skillPersonLevel.put(skill.type(), person, level + 1);
+            }
+        }
+    }
+
+    private int getStartDay(List<String> assignedPeople, Map<String, Integer> personFree) {
+        return assignedPeople.stream()
+            .map(personFree::get)
+            .mapToInt(Integer::intValue)
+            .max()
+            .getAsInt();
     }
 }

@@ -1,7 +1,9 @@
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import collection.ListUtils;
 import io.Input;
 import io.Output;
 import solution.InputAdapter;
@@ -15,7 +17,6 @@ import summary.Summary;
 
 public class Main {
 
-    private static final int LOOP = 1;
     private static final List<Case> CASES = List.of(Case.a, Case.b, Case.c, Case.d, Case.e, Case.f);
     private static final Input INPUT = new Input("src\\main\\resources\\in\\");
     private static final Output OUTPUT = new Output("src\\main\\resources\\out\\");
@@ -23,22 +24,33 @@ public class Main {
 
     public static void main(String[] args) {
 
-//        testExampleA();
-//        execute();
-        executeCase(Case.f);
-        analyse(Case.f);
-        getResultSummary();
+        //        testExampleA();
+        //        execute();
+                executeCase(Case.e);
+//        analyse(Case.c);
+                getResultSummary();
     }
 
     private static void analyse(Case f) {
         InputAdapter inputAdapter = new InputAdapter(INPUT.read(f.name()));
+        Map<String, Integer> uniqueSkills = uniqueSkills(inputAdapter);
+        var daysHist = daysHist(inputAdapter);
+        System.out.println(daysHist);
+        System.out.println(uniqueSkills);
+    }
+
+    private static Map<Integer, Integer> daysHist(InputAdapter inputAdapter) {
+        return ListUtils.valueCountInt(inputAdapter.getProjects().stream().map(Project::days).collect(Collectors.toList()));
+    }
+
+    private static Map<String, Integer> uniqueSkills(InputAdapter inputAdapter) {
         var uniqueSkills = inputAdapter.getProjects()
             .stream()
             .collect(Collectors.toMap(
                 Project::name,
                 project -> project.skills().stream().map(Skill::type).collect(Collectors.toSet()).size()
             ));
-        System.out.println(uniqueSkills);
+        return uniqueSkills;
     }
 
     private static void testExampleA() {
@@ -81,9 +93,13 @@ public class Main {
         var solutionGreedy = new SolutionGreedy(inputAdapter);
         var solution = new SolutionImpl(inputAdapter);
 
-//        List<Assign> result = solutionGreedy.calculate();
-        var result = solution.greedyF();
+        var maxReward = Comparator.comparingInt(Project::reward).reversed();
+        var minSkillLevel = Comparator.<Project>comparingInt(project ->
+            project.skills().stream().mapToInt(Skill::level).sum() / project.skills().size());
+        var minSkillSize = Comparator.<Project>comparingInt(project -> project.skills().size());
+        var result = solution.simulation(maxReward);
         long score = solution.score(result);
+        System.err.println("score = " + score);
 
         // adapt score to output
         var outputAdapter = new OutputAdapter(result);
