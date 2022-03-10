@@ -26,7 +26,7 @@ public class Main {
 
         //        testExampleA();
         //        execute();
-                executeCase(Case.e);
+                executeCase(Case.f);
 //        analyse(Case.c);
                 getResultSummary();
     }
@@ -97,7 +97,8 @@ public class Main {
         var minSkillLevel = Comparator.<Project>comparingInt(project ->
             project.skills().stream().mapToInt(Skill::level).sum() / project.skills().size());
         var minSkillSize = Comparator.<Project>comparingInt(project -> project.skills().size());
-        var result = solution.simulation(maxReward);
+
+        var result = solution.simulationForE(1000);
         long score = solution.score(result);
         System.err.println("score = " + score);
 

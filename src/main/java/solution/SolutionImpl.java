@@ -2,6 +2,7 @@ package solution;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,6 +20,120 @@ public class SolutionImpl {
 
     public SolutionImpl(InputAdapter inputAdapter) {
         this.inputAdapter = inputAdapter;
+    }
+
+    public List<Assign> simulationForE(int loopScope) {
+        // for each turn, loop for all the remained projects to find one has most reward & minimize the contributors
+        // waiting time.
+
+        var noScore = 0;
+        var skillPersonLevel = inputAdapter.skillPersonLevel();
+        var peopleNames = new HashSet<>(inputAdapter.nameToPeople().keySet());
+        Map<String, Integer> personFree = initPeronFreeDay(peopleNames);
+
+        var projects = inputAdapter.getProjects();
+
+        var results = new ArrayList<Assign>();
+
+        while (!projects.isEmpty()) {
+            Collections.shuffle(projects);
+            var maxProjectValue = 0d;
+            Project chooseProject = null;
+            var finalAssignedPeople = new ArrayList<String>();
+
+            int loop = 0;
+
+            for (Project project : projects) {
+                loop++;
+                if(loop > loopScope) {
+                    break;
+                }
+
+                var canAssign = true;
+                var assignedPeople = new ArrayList<String>();
+
+                Map<String, Integer> needsMentor = new HashMap<String, Integer>(); // skill type to level
+                var canMentor = new HashMap<String, Integer>(); // skill type to level
+
+                var needSkills = project.skills();
+                for (Skill skill : needSkills) {
+
+                    var type = skill.type();
+                    var candidates = new ArrayList<String>();
+                    for (String person : peopleNames) {
+                        if (!assignedPeople.contains(person)) {
+                            var level = Optional.ofNullable(skillPersonLevel.get(type, person)).orElse(0);
+                            if (level >= skill.level() - 1) {
+                                candidates.add(person);
+                            }
+                        }
+                    }
+                    if (candidates.isEmpty()) {
+                        canAssign = false;
+                        break;
+                    }
+                    String person;
+                    if (needsMentor.isEmpty()) {
+                        person = findAvailablePerson(candidates, personFree);
+                    } else {
+                        person = findMentor(candidates, needsMentor, skillPersonLevel, personFree);
+                    }
+
+                    assignedPeople.add(person);
+
+                    var level = Optional.ofNullable(skillPersonLevel.get(type, person)).orElse(0);
+                    skillPersonLevel.column(person)
+                        .forEach((sType, sLevel) -> {
+                            canMentor.put(sType, Math.max(canMentor.getOrDefault(sType, 0), sLevel));
+                        });
+                    needsMentor = needsMentor.entrySet().stream()
+                        .filter(typeToLevel -> canMentor.getOrDefault(typeToLevel.getKey(), 0) < typeToLevel.getValue())
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    if (level == skill.level() - 1) {
+                        if (canMentor.getOrDefault(type, 0) < skill.level()) {
+                            needsMentor.put(type, skill.level());
+                        }
+                    }
+                }
+                if (canAssign && needsMentor.isEmpty()) {
+                    var wastTime = getWastTime(assignedPeople, personFree);
+                    var reward = project.reward();
+
+                    var currentProjectValue = 1.0 * reward / wastTime; // To try different strategy
+                    if (chooseProject == null) {
+                        maxProjectValue = currentProjectValue;
+                        chooseProject = project;
+                        finalAssignedPeople = assignedPeople;
+                    } else {
+
+                        if (maxProjectValue < currentProjectValue) {
+                            maxProjectValue = currentProjectValue;
+                            chooseProject = project;
+                            finalAssignedPeople = assignedPeople;
+                        }
+                    }
+                }
+            }
+
+            if (chooseProject != null) {
+                projects.remove(chooseProject);
+                var needSkills = chooseProject.skills();
+                var startDay = getStartDay(finalAssignedPeople, personFree);
+                var days = chooseProject.days();
+                var endDays = startDay + days;
+                var assign = new Assign(chooseProject.name(), finalAssignedPeople);
+                results.add(assign);
+                // update skill
+                updateSkill(finalAssignedPeople, needSkills, skillPersonLevel);
+                // update person free
+                updatePersonFree(personFree, finalAssignedPeople, endDays);
+            } else {
+                break;
+            }
+        }
+        System.err.println("no score " + noScore);
+        System.err.println("totoal assign " + results.size());
+        return results;
     }
 
     public List<Assign> simulation(Comparator<Project> comparator) {
@@ -252,6 +367,22 @@ public class SolutionImpl {
     }
 
     private int getStartDay(List<String> assignedPeople, Map<String, Integer> personFree) {
+        return maxDays(assignedPeople, personFree);
+    }
+
+    private int getWastTime(List<String> assignedPeople, Map<String, Integer> personFree) {
+        return maxDays(assignedPeople, personFree) - minDays(assignedPeople, personFree);
+    }
+
+    private int minDays(List<String> assignedPeople, Map<String, Integer> personFree) {
+        return assignedPeople.stream()
+            .map(personFree::get)
+            .mapToInt(Integer::intValue)
+            .min()
+            .getAsInt();
+    }
+
+    private int maxDays(List<String> assignedPeople, Map<String, Integer> personFree) {
         return assignedPeople.stream()
             .map(personFree::get)
             .mapToInt(Integer::intValue)
