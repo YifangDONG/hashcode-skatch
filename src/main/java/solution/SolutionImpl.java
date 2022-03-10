@@ -45,7 +45,7 @@ public class SolutionImpl {
 
             for (Project project : projects) {
                 loop++;
-                if(loop > loopScope) {
+                if (loop > loopScope) {
                     break;
                 }
 
@@ -273,9 +273,9 @@ public class SolutionImpl {
         Map<String, Integer> personFree = initPeronFreeDay(peopleNames);
 
         for (Assign assign : assigns) {
+            checkPeopleUnique(assign);
 
             var assignedPeople = assign.people();
-            checkPeopleUnique(assignedPeople);
             var project = nameToProject.get(assign.projectName());
             var needSkills = project.skills();
             skillCheck(assignedPeople, needSkills, skillPersonLevel);
@@ -298,21 +298,74 @@ public class SolutionImpl {
         return score;
     }
 
+    public ResultInside getResultInside(List<Assign> assigns) {
+        int nProjectFullScore = 0;
+        int nZeroScoreProject = 0;
+        int beMentoredTimes = 0;
+        int increaseSkillTimes = 0;
+        var waitingTime = new Pair(0, 0);
+
+        var skillPersonLevel = inputAdapter.skillPersonLevel();
+        var peopleNames = inputAdapter.nameToPeople().keySet();
+        var nameToProject = inputAdapter.projects();
+        Map<String, Integer> personFree = initPeronFreeDay(peopleNames);
+        var contributed = new HashSet<String>();
+
+        for (Assign assign : assigns) {
+            checkPeopleUnique(assign);
+            var assignedPeople = assign.people();
+            contributed.addAll(assignedPeople);
+
+            var project = nameToProject.get(assign.projectName());
+            var needSkills = project.skills();
+            beMentoredTimes += skillCheck(assignedPeople, needSkills, skillPersonLevel);
+
+            var startDay = getStartDay(assignedPeople, personFree);
+            var wast = wastTime(assignedPeople, personFree, startDay);
+            waitingTime = waitingTime.plus(wast);
+
+            var days = project.days();
+            var endDays = startDay + days;
+            // update the person available days
+            updatePersonFree(personFree, assignedPeople, endDays);
+
+            // update skill level
+            increaseSkillTimes += updateSkill(assignedPeople, needSkills, skillPersonLevel);
+
+            // add score
+            var thisReward = Math.max(0, project.reward() - Math.max(0, endDays - project.before()));
+            if (thisReward == project.reward()) {
+                nProjectFullScore++;
+            } else if (thisReward == 0) {
+                nZeroScoreProject++;
+            }
+        }
+
+        return new ResultInside(String.format("%d/%d", assigns.size(), inputAdapter.getProjects().size()),
+            nProjectFullScore,
+            nZeroScoreProject, beMentoredTimes, increaseSkillTimes, waitingTime.average(), String.format("%d/%d",
+            contributed.size(),
+            inputAdapter.getPeople().size()));
+    }
+
     private void updatePersonFree(Map<String, Integer> personFree, List<String> assignedPeople, int endDays) {
         for (String person : assignedPeople) {
             personFree.put(person, endDays);
         }
     }
 
-    private void checkPeopleUnique(List<String> assignedPeople) {
+    private void checkPeopleUnique(Assign assign) {
+        var assignedPeople = assign.people();
         if (assignedPeople.size() != new HashSet<>(assignedPeople).size()) {
-            throw new IllegalArgumentException("assign one person to more than one task");
+            throw new IllegalArgumentException(String.format("project %s has assign one person to more than one task"
+                , assign.projectName()));
         }
     }
 
-    private void skillCheck(List<String> assignedPeople, List<Skill> needSkills, Table<String, String, Integer> skillPersonLevel) {
+    private int skillCheck(List<String> assignedPeople, List<Skill> needSkills,
+        Table<String, String, Integer> skillPersonLevel) {
 
-        var assigned = new HashSet<String>(assignedPeople);
+        var assigned = new HashSet<>(assignedPeople);
         if (assignedPeople.size() != needSkills.size()) {
             throw new IllegalArgumentException("people size not match");
         }
@@ -326,7 +379,7 @@ public class SolutionImpl {
                 mentorSkills.add(skill.type());
             }
         }
-
+        int mentorTimes = 0;
         for (int i = 0; i < assignedPeople.size(); i++) {
             var skill = needSkills.get(i);
             var person = assignedPeople.get(i);
@@ -336,7 +389,7 @@ public class SolutionImpl {
             } else if (currentLevel + 1 == skill.level()) {
                 // mentor
                 if (mentorSkills.contains(skill.type())) {
-
+                    mentorTimes++;
                 } else {
                     throw new IllegalArgumentException("cannot mentor");
                 }
@@ -344,6 +397,7 @@ public class SolutionImpl {
                 throw new IllegalArgumentException("skill not match");
             }
         }
+        return mentorTimes;
     }
 
     private Map<String, Integer> initPeronFreeDay(Set<String> peopleNames) {
@@ -354,20 +408,37 @@ public class SolutionImpl {
         return personFree;
     }
 
-    private void updateSkill(List<String> assignedPeople, List<Skill> skillsNeeds, Table<String, String, Integer> skillPersonLevel) {
+    private int updateSkill(List<String> assignedPeople, List<Skill> skillsNeeds,
+        Table<String, String, Integer> skillPersonLevel) {
+        int increaseSkillTimes = 0;
         var size = assignedPeople.size();
         for (int i = 0; i < size; i++) {
             var skill = skillsNeeds.get(i);
             var person = assignedPeople.get(i);
-            var level = Optional.ofNullable(skillPersonLevel.get(skill.type(), person)).orElse(0);
+            int level = Optional.ofNullable(skillPersonLevel.get(skill.type(), person)).orElse(0);
             if (level == skill.level() || level == skill.level() - 1) {
                 skillPersonLevel.put(skill.type(), person, level + 1);
+                increaseSkillTimes++;
             }
         }
+        return increaseSkillTimes;
     }
 
     private int getStartDay(List<String> assignedPeople, Map<String, Integer> personFree) {
         return maxDays(assignedPeople, personFree);
+    }
+
+    private Pair wastTime(List<String> assignedPeople, Map<String, Integer> personFree, int startDate) {
+        var wast = 0;
+        var nb = 0;
+        for (String person : assignedPeople) {
+            var free = personFree.get(person);
+            if (free < startDate) {
+                wast += startDate - free;
+                nb++;
+            }
+        }
+        return new Pair(wast, nb);
     }
 
     private int getWastTime(List<String> assignedPeople, Map<String, Integer> personFree) {

@@ -6,9 +6,11 @@ import java.util.stream.Collectors;
 import collection.ListUtils;
 import io.Input;
 import io.Output;
+import solution.Assign;
 import solution.InputAdapter;
 import solution.OutputAdapter;
 import solution.Project;
+import solution.ResultInside;
 import solution.Skill;
 import solution.SolutionGreedy;
 import solution.SolutionImpl;
@@ -26,10 +28,12 @@ public class Main {
 
         //        testExampleA();
         //        execute();
-                executeCase(Case.f);
-//        analyse(Case.c);
-                getResultSummary();
+//        executeCase(Case.f);
+        //        analyse(Case.c);
+//        getResultSummary();
+        getResultInside(Case.f, "f\\8");
     }
+
 
     private static void analyse(Case f) {
         InputAdapter inputAdapter = new InputAdapter(INPUT.read(f.name()));
@@ -51,6 +55,15 @@ public class Main {
                 project -> project.skills().stream().map(Skill::type).collect(Collectors.toSet()).size()
             ));
         return uniqueSkills;
+    }
+
+    private static void getResultInside(Case aCase, String resultFile) {
+        InputAdapter inputAdapter = new InputAdapter(INPUT.read(aCase.name()));
+        InputAdapter resultAdapter = new InputAdapter(READ_OUTPUT.read(resultFile));
+        var assigns = resultAdapter.getAssigns();
+        var solution = new SolutionImpl(inputAdapter);
+        var resultInside = solution.getResultInside(assigns);
+        System.out.println(resultInside);
     }
 
     private static void testExampleA() {
