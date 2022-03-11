@@ -303,7 +303,7 @@ public class SolutionImpl {
         int nZeroScoreProject = 0;
         int beMentoredTimes = 0;
         int increaseSkillTimes = 0;
-        var waitingTime = new Pair(0, 0);
+        var waitingTime = new HashMap<String, List<Pair>>();
 
         var skillPersonLevel = inputAdapter.skillPersonLevel();
         var peopleNames = inputAdapter.nameToPeople().keySet();
@@ -321,11 +321,16 @@ public class SolutionImpl {
             beMentoredTimes += skillCheck(assignedPeople, needSkills, skillPersonLevel);
 
             var startDay = getStartDay(assignedPeople, personFree);
-            var wast = wastTime(assignedPeople, personFree, startDay);
-            waitingTime = waitingTime.plus(wast);
 
             var days = project.days();
             var endDays = startDay + days;
+
+            for (String people : assignedPeople) {
+                var waiting = waitingTime.getOrDefault(people, new ArrayList<>());
+                waiting.add(new Pair(startDay, endDays));
+                waitingTime.put(people, waiting);
+            }
+
             // update the person available days
             updatePersonFree(personFree, assignedPeople, endDays);
 
@@ -343,9 +348,26 @@ public class SolutionImpl {
 
         return new ResultInside(String.format("%d/%d", assigns.size(), inputAdapter.getProjects().size()),
             nProjectFullScore,
-            nZeroScoreProject, beMentoredTimes, increaseSkillTimes, waitingTime.average(), String.format("%d/%d",
+            nZeroScoreProject, beMentoredTimes, increaseSkillTimes, waitingAverage(waitingTime), String.format("%d/%d",
             contributed.size(),
             inputAdapter.getPeople().size()));
+    }
+
+    private double waitingAverage(HashMap<String, List<Pair>> waitingTime) {
+        int sum = 0;
+        int n = 0;
+        for (Map.Entry<String, List<Pair>> e : waitingTime.entrySet()) {
+            var waiting = e.getValue();
+            // waiting to start the first project
+            sum += waiting.get(0).a();
+            n++;
+            for (int i = 1; i < waiting.size(); i++) {
+                // waiting to start the following project
+                sum += waiting.get(i).a() - waiting.get(i - 1).b();
+                n++;
+            }
+        }
+        return 1.0 * sum / n;
     }
 
     private void updatePersonFree(Map<String, Integer> personFree, List<String> assignedPeople, int endDays) {
@@ -426,19 +448,6 @@ public class SolutionImpl {
 
     private int getStartDay(List<String> assignedPeople, Map<String, Integer> personFree) {
         return maxDays(assignedPeople, personFree);
-    }
-
-    private Pair wastTime(List<String> assignedPeople, Map<String, Integer> personFree, int startDate) {
-        var wast = 0;
-        var nb = 0;
-        for (String person : assignedPeople) {
-            var free = personFree.get(person);
-            if (free < startDate) {
-                wast += startDate - free;
-                nb++;
-            }
-        }
-        return new Pair(wast, nb);
     }
 
     private int getWastTime(List<String> assignedPeople, Map<String, Integer> personFree) {
